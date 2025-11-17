@@ -1,0 +1,42 @@
+repos:
+  # --- Ruff (линтер + автоформатирование) ---
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.1
+    hooks:
+      - id: ruff
+        name: ruff (lint)
+        args: ["--fix"]     # автоисправление
+      - id: ruff-format
+        name: ruff (format)
+
+  # --- Mypy (type checking) ---
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pydantic
+          - SQLAlchemy
+          - types-requests
+        args:
+          - "--strict"
+          - "--ignore-missing-imports"
+
+  # --- Pre-commit default hooks (базовые проверки) ---
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+      - id: check-json
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+
+    # --- Alembic migration check ---
+  # - repo: local
+  #   hooks:
+  #     - id: alembic-check
+  #       name: alembic migration check
+  #       entry: bash -c "alembic upgrade --sql head > /dev/null"
+  #       language: system
+  #       pass_filenames: false

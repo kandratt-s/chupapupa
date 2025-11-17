@@ -1,6 +1,4 @@
 fastapi
-pydantic
-pydantic-settings
 
 faststream
 
@@ -9,5 +7,6 @@ ruff
 pre-commit
 
 pydantic
+pydantic-settings
 SQLAlchemy
 alembic
