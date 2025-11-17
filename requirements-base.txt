@@ -1,0 +1,13 @@
+fastapi
+pydantic
+pydantic-settings
+
+faststream
+
+mypy
+ruff
+pre-commit
+
+pydantic
+SQLAlchemy
+alembic
