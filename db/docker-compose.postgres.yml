@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres-main
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chupapupa
+      POSTGRES_PASSWORD: chupapupaZXC
+      POSTGRES_DB: chupapupa_pj
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
