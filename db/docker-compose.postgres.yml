@@ -8,10 +8,16 @@ services:
       POSTGRES_PASSWORD: chupapupaZXC
       POSTGRES_DB: chupapupa_pj
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      #- postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U chupapupa -d chupapupa_pj" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   postgres_data:

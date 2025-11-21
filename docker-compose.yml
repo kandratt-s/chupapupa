@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  postgres:
+    extends:
+      file: db/docker-compose.postgres.yml
+      service: postgres
+
+  auth-service:
+    build: ./services/auth
+    environment:
+      - AUTH_DATABASE_URL=postgresql+asyncpg://auth_user:auth_pass@postgres:5432/chupapupa_pj
+      - AUTH_SYNC_DATABASE_URL=postgresql://auth_user:auth_pass@postgres:5432/chupapupa_pj
+      - AUTH_SCHEMA_NAME=auth_service
+      - RUN_MIGRATIONS=true
+      - RUN_APP=true
+      - DB_ECHO=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/auth:/app

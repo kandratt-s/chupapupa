@@ -1,0 +1,7 @@
+sqlalchemy
+alembic
+pydantic
+pydantic_settings
+fastapi
+uvicorn
+asyncpg
