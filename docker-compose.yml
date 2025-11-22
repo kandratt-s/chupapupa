@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     extends:
@@ -7,18 +5,17 @@ services:
       service: postgres
 
   auth-service:
-    build: ./services/auth
-    environment:
-      - AUTH_DATABASE_URL=postgresql+asyncpg://auth_user:auth_pass@postgres:5432/chupapupa_pj
-      - AUTH_SYNC_DATABASE_URL=postgresql://auth_user:auth_pass@postgres:5432/chupapupa_pj
-      - AUTH_SCHEMA_NAME=auth_service
-      - RUN_MIGRATIONS=true
-      - RUN_APP=true
-      - DB_ECHO=true
+    build:
+      context: . # чтобы иметь возможность загружать файлы за докерфайлом (requirements-base.txt)
+      dockerfile: ./services/auth/Dockerfile
+    env_file:
+      - ./services/auth/.env  # Загружаем переменные из .env файла сервиса
     depends_on:
+      # Ожидаем готовности Postgres перед запуском сервиса
       postgres:
         condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
+      # Монтируем код для разработки (hot-reload)
       - ./services/auth:/app

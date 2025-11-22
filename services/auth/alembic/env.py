@@ -1,9 +1,9 @@
-from logging.config import fileConfig
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from alembic import context
 import os
 import sys
+from logging.config import fileConfig
+
+from alembic import context
+from sqlalchemy import engine_from_config, pool, text
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -18,7 +18,7 @@ except ImportError as e:
     print(f"Error importing settings from db.py: {e}")
     database_url = os.getenv(
         "AUTH_SYNC_DATABASE_URL",
-        "postgresql://auth_user:auth_pass@postgres:5432/chupapupa_pj"
+        "postgresql://auth_user:auth_pass@postgres:5432/chupapupa_pj",
     )
     schema_name = os.getenv("AUTH_SCHEMA_NAME", "auth_service")
 
@@ -34,9 +34,14 @@ target_metadata = None
 
 def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(url=url, target_metadata=target_metadata, literal_binds=True,
-                      dialect_opts={"paramstyle": "named"}, version_table_schema=schema_name,
-                      include_schemas=True, )
+    context.configure(
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+        version_table_schema=schema_name,
+        include_schemas=True,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
@@ -44,13 +49,20 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),prefix="sqlalchemy.", poolclass=pool.NullPool, )
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
 
     with connectable.connect() as connection:
-        connection.execute(f"SET search_path TO {schema_name}")
+        connection.execute(text(f"SET search_path TO {schema_name}"))
 
-        context.configure( connection=connection, target_metadata=target_metadata,
-                           version_table_schema=schema_name, include_schemas=True,)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            version_table_schema=schema_name,
+            include_schemas=True,
+        )
 
         with context.begin_transaction():
             context.run_migrations()

@@ -1,15 +1,17 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db import get_db
 
 app = FastAPI(title="Auth Service")
 
+
 @app.get("/")
-async def root():
+async def root() -> dict[str, str]:
     return {"message": "Auth Service is running"}
 
-@app.get("/health")
-async def health():
-    return {"status": "healthy"}
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.get("/health")
+async def health(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
+    await db.execute("SELECT 1")
+    return {"status": "healthy", "database": "connected"}
