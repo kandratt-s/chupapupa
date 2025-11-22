@@ -13,8 +13,8 @@ def handle_message(message):
       "Ola!",
       "Bonjorno!"
   ]
-    response = random.choice(responses)
-    bot.reply_to(message, response)
+  response = random.choice(responses)
+  bot.reply_to(message, response)
 
 if __name__ == '__main__':
   print("Бот запущен!")
