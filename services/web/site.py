@@ -34,7 +34,7 @@ with tab1:
             st.write("Authorization finished unsuccessful!")
 
 with tab2:
-    check = st.button("Novikov Zalup Sergeevich")
+    check = st.button("Check score")
     if check:
         st.write(users[0].get("score"))
 

@@ -1,0 +1,14 @@
+{
+   "1470042403": {
+      "email": "a@gmail.com",
+      "token": "TOKEN_1470042403",
+      "role": "student",
+      "practice_points": 10
+   },
+   "1479925252": {
+      "email": "drfdrd@gmail.com",
+      "token": "TOKEN_1479925252",
+      "role": "student",
+      "practice_points": 5
+   }
+}

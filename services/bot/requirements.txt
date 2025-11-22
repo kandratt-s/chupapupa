@@ -1,2 +1,5 @@
 aiogram
 asyncio
+httpx
+json
+email_validator
