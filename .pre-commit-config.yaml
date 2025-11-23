@@ -19,7 +19,7 @@ repos:
           - SQLAlchemy
           - types-requests
         args:
-          #- "--strict"
+          - "--strict"
           - "--ignore-missing-imports"
           - "--explicit-package-bases"
           - "--namespace-packages"
