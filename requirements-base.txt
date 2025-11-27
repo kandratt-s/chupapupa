@@ -13,3 +13,5 @@ alembic
 
 asyncpg
 uvicorn
+
+psycopg2-binary

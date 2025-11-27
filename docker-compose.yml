@@ -19,3 +19,101 @@ services:
     volumes:
       # Монтируем код для разработки (hot-reload)
       - ./services/auth:/app
+
+  admin-service:
+    build:
+      context: .
+      dockerfile: ./services/admin/Dockerfile
+    env_file:
+      - ./services/admin/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/admin:/app
+
+  attendance-service:
+    build:
+      context: .
+      dockerfile: ./services/attendance/Dockerfile
+    env_file:
+      - ./services/attendance/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/attendance:/app
+
+  bot-service:
+    build:
+      context: .
+      dockerfile: ./services/bot/Dockerfile
+    env_file:
+      - ./services/bot/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/bot:/app
+
+  cv-service:
+    build:
+      context: .
+      dockerfile: ./services/CV/Dockerfile
+    env_file:
+      - ./services/CV/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/CV:/app
+
+  event-service:
+    build:
+      context: .
+      dockerfile: ./services/event/Dockerfile
+    env_file:
+      - ./services/event/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/event:/app
+
+  user_statistic-service:
+    build:
+      context: .
+      dockerfile: ./services/userStatistic/Dockerfile
+    env_file:
+      - ./services/userStatistic/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/userStatistic:/app
+
+  web-service:
+    build:
+      context: .
+      dockerfile: ./services/web/Dockerfile
+    env_file:
+      - ./services/web/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/web:/app
