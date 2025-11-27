@@ -3,3 +3,4 @@ asyncio
 httpx
 json
 email_validator
+python-multipart

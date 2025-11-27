@@ -14,7 +14,6 @@ def save_user(users: dict):
     with open(JSON_PATH, "w", encoding="utf-8") as f:
         json.dump(cur_users, f, indent=3)
 
-
 users = load_users()
 
 st.title("Practice Service")
@@ -43,7 +42,6 @@ with tab2:
     if submit:
         users[0]["score"] = users[0].get("score", 0) + 2
         st.write(users[0].get("score"))
-
 
 with tab3:
     tasks=load_users()
