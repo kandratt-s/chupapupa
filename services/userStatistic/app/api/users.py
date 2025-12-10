@@ -54,11 +54,6 @@ async def get_my_profile(
             detail=f"Пользователь с ID {current_user['user_id']} не найден",
         )
 
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Аккаунт деактивирован"
-        )
-
     return UserResponse.from_orm(user)
 
 

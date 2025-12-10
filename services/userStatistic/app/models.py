@@ -3,7 +3,7 @@
 Определяет структуру таблицы пользователей в БД в соответствии с реальной схемой проекта.
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime
+from sqlalchemy import Column, Integer, String, Float, DateTime
 from sqlalchemy.sql import func
 from sqlalchemy.orm import DeclarativeBase
 
@@ -57,11 +57,6 @@ class User(Base):
     # Система баллов
     practice_points = Column(
         Float, default=0.0, nullable=False, comment="Число набранных очков за практику"
-    )
-
-    # Статус пользователя
-    is_active = Column(
-        Boolean, default=True, nullable=False, comment="Активен ли пользователь"
     )
 
     # Файловая система
