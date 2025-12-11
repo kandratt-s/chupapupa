@@ -1,14 +1,9 @@
 {
    "1470042403": {
-      "email": "me@gmail.com",
-      "token": "TOKEN_1470042403",
-      "role": "student",
+      "email": "admin",
+      "login": "admin",
+      "token": "ADMIN_1470042403_1764778094",
+      "role": "admin",
       "practice_points": 0
-   },
-   "1479925252": {
-      "email": "Htuhh@gmail.com",
-      "token": null,
-      "role": "student",
-      "practice_points": 2
    }
 }
