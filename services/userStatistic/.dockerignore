@@ -1,0 +1,83 @@
+# =================================================================
+# .dockerignore для userStatistic микросервиса
+# Исключает ненужные файлы из Docker образа
+# =================================================================
+
+# Git файлы
+.git
+.gitignore
+.gitattributes
+
+# Переменные окружения
+.env
+.env.*
+!.env.example
+
+# Python кеш и виртуальные окружения
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PIPFILE.lock
+
+# Виртуальные окружения
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE файлы
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Логи и временные файлы
+*.log
+*.tmp
+*.temp
+
+# Тесты и покрытие
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Docker файлы (исключаем только dev версии)
+docker-compose.dev.yml
+docker-compose.override.yml
+
+# Документация
+README.md
+*.md
+docs/
+
+# Макос файлы
+.DS_Store
+
+# Windows файлы
+Thumbs.db
+ehthumbs.db
+Desktop.ini
