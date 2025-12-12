@@ -11,7 +11,7 @@ import httpx
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
-from config import (
+from services.bot.local_bot.config import (
     BOT_TOKEN,
     USER_TOKENS_PATH,
     USER_INFO_PATH,
@@ -20,7 +20,7 @@ from config import (
     EVENTS_PATH,
     PHOTOS_DIR,
 )
-from utils import (
+from services.bot.Bot_local.core.utils import (
     load,
     save,
     validate_mail,

@@ -5,8 +5,9 @@ import time
 from email_validator import validate_email, EmailNotValidError
 from aiogram import types
 import hashlib
+import asyncio
 
-from config import (
+from services.bot.local_bot.config import (
     USER_STATES_PATH,
     PHOTOS_DIR,
 )
@@ -82,3 +83,27 @@ def hash_password(pwd: str) -> str:
 
 def ensure_photos_dir():
     os.makedirs(PHOTOS_DIR, exist_ok=True)
+
+def safe_log_error(context: str, exc: Exception) -> None:
+    """Простая обёртка для логирования ошибок."""
+    print(f"[ERROR] {context}: {exc}")
+
+
+async def delete_message_safe(chat_id, message_id, bot=None):
+    """
+    Безопасное удаление сообщения.
+    Можно передавать bot либо использовать message.bot.
+    """
+    try:
+        if bot:
+            await bot.delete_message(chat_id, message_id)
+        else:
+            # если bot не передан — ничего не делаем
+            return
+    except Exception:
+        await asyncio.sleep(0.1)
+        try:
+            if bot:
+                await bot.delete_message(chat_id, message_id)
+        except Exception:
+            pass

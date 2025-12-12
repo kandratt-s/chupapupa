@@ -6,8 +6,8 @@ import httpx
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
-from config import BOT_TOKEN, GATEWAY_URL
-from utils import validate_mail, validate_password, ensure_photos_dir
+from services.bot.local_bot.config import BOT_TOKEN, GATEWAY_URL
+from services.bot.Bot_local.core.utils import validate_mail, validate_password, ensure_photos_dir
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()

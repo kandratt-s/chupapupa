@@ -1,0 +1,21 @@
+{
+   "1470042403": {
+      "state": "admin_events_list",
+      "events": [
+         {
+            "template_id": 1765570576,
+            "event_name": "test",
+            "description": "nope",
+            "is_profile": true,
+            "event_date": "12-08-2006",
+            "event_date_ts": 1155330000,
+            "is_template": true,
+            "is_active": true,
+            "created_by": "1470042403",
+            "timestamp": 1765570576
+         }
+      ],
+      "page": 0,
+      "filter": "active"
+   }
+}
