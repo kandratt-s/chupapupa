@@ -1,0 +1,45 @@
+# =================================================================
+# Docker Compose для локальной разработки Auth сервиса
+#
+# ИСПОЛЬЗОВАНИЕ:
+# 1. Сначала поднимите PostgreSQL:
+#    cd ../../db && docker-compose -f docker-compose.postgres.yml up -d
+# 2. Затем запустите сервис:
+#    docker-compose up
+#
+# ОСТАНОВКА:
+# 1. Остановите сервис: docker-compose down
+# 2. При необходимости остановите БД:
+#    cd ../../db && docker-compose -f docker-compose.postgres.yml down
+# =================================================================
+
+services:
+  # Auth микросервис
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth_service_dev
+    environment:
+      # Подключение к общей базе данных (должна быть запущена отдельно)
+      - DATABASE_URL=postgresql://chupapupa:chupapupaZXC@172.17.0.1:5432/chupapupa_pj
+      # КРИТИЧЕСКИ ВАЖНО: Сгенерируйте безопасный ключ командой:
+      # python -c "import secrets; print(secrets.token_urlsafe(32))"
+      - SECRET_KEY=${SECRET_KEY:-INSECURE-DEFAULT-KEY-CHANGE-IMMEDIATELY}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      - DEBUG=true
+      - ENVIRONMENT=development
+    ports:
+      - "8001:8001"
+    volumes:
+      # Для локальной разработки - монтируем код
+      - ./:/app
+    command: ["uvicorn", "main_auth:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
