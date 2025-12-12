@@ -1,110 +1,198 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+"""
+Главный файл Auth сервиса.
+Обрабатывает авторизацию и выдачу JWT токенов.
+"""
+
+from fastapi import FastAPI, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
-from datetime import timedelta
-from typing import List
+from datetime import timedelta, datetime
+from typing import Dict, Any, Optional
 
 from database import engine, get_db
-from models import Base, User
+from models import Base, Auth
 from schemas import (
-    UserCreateByAdmin, UserResponse, Token,
-    LoginRequest, LoginResponse, RefreshTokenRequest,
-    UserUpdate
+    LoginRequest, AuthCreate, AuthUpdate, AuthResponse, 
+    Token, RefreshTokenRequest, UserRole, ChangePasswordRequest
 )
-from crud import *
-from auth import *
-from dependencies import *
+from crud import authenticate_user, create_auth, update_auth, get_auth_by_user_id
+from auth import (
+    create_access_token, create_refresh_token, decode_token,
+    ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
+)
 
 # Создаем таблицы
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="HSE Event Management API",
-    description="API для управления мероприятиями ВШЭ с авторизацией через админов",
+    title="Auth Service API",
+    description="Микросервис аутентификации для системы управления событиями ВШЭ",
     version="1.0.0"
 )
 
 
-# ========== ПУБЛИЧНЫЕ ЭНДПОИНТЫ ==========
+# ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 
-@app.post("/login", response_model=Token)
-async def login(
-        login_data: LoginRequest,
-        db: Session = Depends(get_db)
-):
-    """
-    Вход в систему для существующих пользователей
-    (пользователей создают админы)
-    """
-    # Аутентифицируем пользователя
-    user = authenticate_user(db, login_data.hse_email, login_data.password)
-    if not user:
+def get_current_user_from_token(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Получает информацию о текущем пользователе из JWT токена"""
+    if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+            detail="Missing or invalid authorization header"
         )
+    
+    token = authorization.split(" ")[1]
+    
+    try:
+        payload = decode_token(token)
+        if payload.get("type") != "access":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+        
+        user_id = payload.get("user_id")
+        role = payload.get("role")
+        
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload"
+            )
+        
+        # Проверяем, что пользователь существует в Auth таблице
+        auth_record = get_auth_by_user_id(db, user_id)
+        if not auth_record:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+        
+        return {
+            "user_id": user_id,
+            "role": role,
+            "auth_record": auth_record
+        }
+        
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
+
+
+# ========== ПУБЛИЧНЫЕ ЭНДПОИНТЫ ==========
+
+@app.get("/", tags=["health"])
+def root() -> Dict[str, str]:
+    """Базовый health check"""
+    return {"service": "auth-service", "status": "running", "version": "1.0.0"}
+
+
+@app.post("/login", response_model=Token, tags=["auth"])
+def login(
+    login_data: LoginRequest,
+    db: Session = Depends(get_db)
+) -> Token:
+    """
+    Авторизация пользователя.
+    Проверяет user_id и пароль, возвращает JWT токены.
+    """
+    # Аутентифицируем пользователя
+    auth_record = authenticate_user(db, login_data.user_id, login_data.password)
+    if not auth_record:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user_id or password"
+        )
+
+    # Создаем данные для токена
+    token_data = {
+        "user_id": auth_record.user_id,
+        "role": auth_record.role
+    }
 
     # Создаем токены
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     refresh_token_expires = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
 
     access_token = create_access_token(
-        data={"sub": user.hse_email},
+        data=token_data,
         expires_delta=access_token_expires
     )
 
     refresh_token = create_refresh_token(
-        data={"sub": user.hse_email},
+        data=token_data,
         expires_delta=refresh_token_expires
     )
 
     return Token(
         access_token=access_token,
         refresh_token=refresh_token,
-        user=user
+        token_type="bearer",
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
 
 
-@app.post("/refresh", response_model=Token)
-async def refresh_token(
-        refresh_data: RefreshTokenRequest,
-        db: Session = Depends(get_db)
-):
+@app.post("/refresh", response_model=Token, tags=["auth"])
+def refresh_token(
+    refresh_data: RefreshTokenRequest,
+    db: Session = Depends(get_db)
+) -> Token:
     """
-    Обновление access токена
+    Обновление access токена по refresh токену.
     """
     try:
         # Декодируем refresh токен
         payload = decode_token(refresh_data.refresh_token)
-        email = payload.get("sub")
-        token_type = payload.get("type")
-
-        if token_type != "refresh" or not email:
+        
+        # Проверяем тип токена
+        if payload.get("type") != "refresh":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token"
+                detail="Invalid token type"
             )
-
-        # Проверяем, существует ли пользователь
-        user = get_user_by_email(db, email)
-        if not user or not user.is_active:
+        
+        user_id = payload.get("user_id")
+        if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found or inactive"
+                detail="Invalid token payload"
             )
-
-        # Создаем новый access токен
+        
+        # Проверяем, что пользователь существует
+        auth_record = get_auth_by_user_id(db, user_id)
+        if not auth_record:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+        
+        # Создаем новые токены
+        token_data = {
+            "user_id": auth_record.user_id,
+            "role": auth_record.role
+        }
+        
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        new_access_token = create_access_token(
-            data={"sub": user.hse_email},
+        refresh_token_expires = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+        
+        access_token = create_access_token(
+            data=token_data,
             expires_delta=access_token_expires
         )
-
-        return Token(
-            access_token=new_access_token,
-            refresh_token=refresh_data.refresh_token,  # Старый refresh токен
-            user=user
+        
+        new_refresh_token = create_refresh_token(
+            data=token_data,
+            expires_delta=refresh_token_expires
         )
-
+        
+        return Token(
+            access_token=access_token,
+            refresh_token=new_refresh_token,
+            token_type="bearer",
+            expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
+        
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -112,20 +200,66 @@ async def refresh_token(
         )
 
 
-# ========== ЭНДПОИНТЫ ДЛЯ АДМИНОВ ==========
+# ========== ПОЛЬЗОВАТЕЛЬСКИЕ ЭНДПОИНТЫ ==========
 
-@app.post("/admin/users", response_model=UserResponse)
-async def create_user_by_admin(
-        user_data: UserCreateByAdmin,
-        db: Session = Depends(get_db),
-        admin: User = Depends(require_admin)  # Только админы могут создавать пользователей
-):
+@app.put("/change-password", tags=["users"])
+def change_password(
+    password_data: ChangePasswordRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token),
+    db: Session = Depends(get_db)
+) -> Dict[str, str]:
     """
-    Админ создает нового пользователя
+    Смена пароля текущим пользователем.
+    
+    Пользователь должен предоставить:
+    - Текущий пароль для подтверждения
+    - Новый пароль
+    
+    Требует валидный JWT токен в заголовке Authorization.
+    """
+    from auth import verify_password, get_password_hash
+    
+    auth_record = current_user["auth_record"]
+    
+    # Проверяем текущий пароль
+    if not verify_password(password_data.current_password, auth_record.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+    
+    # Хешируем новый пароль
+    new_password_hash = get_password_hash(password_data.new_password)
+    
+    # Обновляем пароль в базе данных
+    auth_record.password_hash = new_password_hash
+    db.commit()
+    
+    return {"message": "Password changed successfully"}
+
+
+# ========== АДМИНСКИЕ ЭНДПОИНТЫ ==========
+
+@app.post("/auth/create", response_model=AuthResponse, tags=["admin"])
+def create_auth_record(
+    auth_data: AuthCreate,
+    db: Session = Depends(get_db)
+) -> AuthResponse:
+    """
+    Создание записи аутентификации для существующего пользователя.
+    ВНИМАНИЕ: user_id должен уже существовать в таблице users из userStatistic!
+    
+    Этот эндпоинт используется Admin сервисом и не требует токенов,
+    так как Auth является базовым сервисом в архитектуре.
     """
     try:
-        user = create_user_by_admin(db, user_data, admin.id)
-        return user
+        auth_record = create_auth(db, auth_data)
+        return AuthResponse(
+            user_id=auth_record.user_id,
+            role=auth_record.role,
+            created_at=auth_record.created_at.isoformat(),
+            updated_at=auth_record.updated_at.isoformat()
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -133,172 +267,61 @@ async def create_user_by_admin(
         )
 
 
-@app.get("/admin/users", response_model=List[UserResponse])
-async def get_all_users_admin(
-        skip: int = 0,
-        limit: int = 100,
-        db: Session = Depends(get_db),
-        admin: User = Depends(require_admin)
-):
+@app.put("/auth/{user_id}", response_model=AuthResponse, tags=["admin"])
+def update_auth_record(
+    user_id: int,
+    auth_data: AuthUpdate,
+    db: Session = Depends(get_db)
+) -> AuthResponse:
     """
-    Админ получает список всех пользователей
+    Обновление записи аутентификации.
+    Используется Admin сервисом для управления пользователями.
     """
-    users = get_all_users(db, skip, limit)
-    return users
-
-
-@app.put("/admin/users/{user_id}", response_model=UserResponse)
-async def update_user_admin(
-        user_id: int,
-        user_data: UserUpdate,
-        db: Session = Depends(get_db),
-        admin: User = Depends(require_admin)
-):
-    """
-    Админ обновляет данные пользователя
-    """
-    user = update_user(db, user_id, user_data)
-    if not user:
+    auth_record = update_auth(db, user_id, auth_data)
+    if not auth_record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail=f"Auth record for user_id {user_id} not found"
         )
-    return user
+    
+    return AuthResponse(
+        user_id=auth_record.user_id,
+        role=auth_record.role,
+        created_at=auth_record.created_at.isoformat(),
+        updated_at=auth_record.updated_at.isoformat()
+    )
 
 
-@app.delete("/admin/users/{user_id}")
-async def deactivate_user_admin(
-        user_id: int,
-        db: Session = Depends(get_db),
-        admin: User = Depends(require_admin)
-):
+@app.get("/auth/{user_id}", response_model=AuthResponse, tags=["admin"])
+def get_auth_record(
+    user_id: int,
+    db: Session = Depends(get_db)
+) -> AuthResponse:
     """
-    Админ деактивирует пользователя
+    Получение информации об аутентификации пользователя.
+    Используется другими сервисами для проверки ролей.
     """
-    success = deactivate_user(db, user_id)
-    if not success:
+    auth_record = get_auth_by_user_id(db, user_id)
+    if not auth_record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail=f"Auth record for user_id {user_id} not found"
         )
-    return {"message": "User deactivated successfully"}
+    
+    return AuthResponse(
+        user_id=auth_record.user_id,
+        role=auth_record.role,
+        created_at=auth_record.created_at.isoformat(),
+        updated_at=auth_record.updated_at.isoformat()
+    )
 
 
-# ========== ОБЩИЕ ЭНДПОИНТЫ (для всех аутентифицированных) ==========
-
-@app.get("/me", response_model=UserResponse)
-async def get_current_user_info(
-        current_user: User = Depends(get_current_active_user)
-):
-    """
-    Получить информацию о текущем пользователе
-    """
-    return current_user
-
-
-@app.put("/me", response_model=UserResponse)
-async def update_current_user(
-        user_data: UserUpdate,
-        db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_active_user)
-):
-    """
-    Обновить информацию о себе
-    (нельзя менять email и роль)
-    """
-    # Запрещаем менять email и роль через этот эндпоинт
-    update_data = user_data.dict(exclude_unset=True)
-    if "hse_email" in update_data or "role" in update_data:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot change email or role"
-        )
-
-    user = update_user(db, current_user.id, user_data)
-    return user
-
-
-@app.get("/protected")
-async def protected_route(
-        current_user: User = Depends(get_current_active_user)
-):
-    """
-    Защищенный маршрут (для всех авторизованных)
-    """
+@app.get("/health", tags=["health"])
+def health_check() -> Dict[str, Any]:
+    """Health check эндпоинт для мониторинга"""
     return {
-        "message": f"Hello, {current_user.full_name}!",
-        "role": current_user.role,
-        "email": current_user.hse_email
+        "status": "healthy", 
+        "service": "auth-service",
+        "timestamp": datetime.utcnow().isoformat()
     }
-
-
-# ========== РОЛЕВЫЕ ЭНДПОИНТЫ ==========
-
-@app.get("/staff/dashboard")
-async def staff_dashboard(
-        staff: User = Depends(require_staff)  # Только сотрудники
-):
-    """
-    Панель управления для сотрудников
-    """
-    return {
-        "message": "Staff dashboard",
-        "user": staff.full_name,
-        "permissions": ["create_events", "view_statistics"]
-    }
-
-
-@app.get("/admin/dashboard")
-async def admin_dashboard(
-        admin: User = Depends(require_admin)  # Только админы
-):
-    """
-    Панель управления для админов
-    """
-    return {
-        "message": "Admin dashboard",
-        "user": admin.full_name,
-        "permissions": ["manage_users", "manage_events", "view_all"]
-    }
-
-
-@app.get("/student/dashboard")
-async def student_dashboard(
-        student: User = Depends(require_role("student"))  # Только студенты
-):
-    """
-    Панель для студентов
-    """
-    return {
-        "message": "Student dashboard",
-        "user": student.full_name,
-        "student_id": student.student_id,
-        "permissions": ["check_in_events", "view_progress"]
-    }
-
-
-# ========== HEALTH CHECKS ==========
-
-@app.get("/")
-async def root():
-    return {"message": "HSE Event Management API"}
-
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "timestamp": datetime.utcnow()}
-
-
-# from fastapi import FastAPI
-# from datetime import datetime
-#
-# app = FastAPI()
-#
-# @app.get("/")
-# def home():
-#     return {"message": "Сервер работает!", "time": datetime.now().isoformat()}
-#
-# @app.get("/test")
-# def test():
-#     return {"status": "OK"}
 

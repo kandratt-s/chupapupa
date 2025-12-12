@@ -1,121 +1,77 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
-from datetime import datetime
+"""
+Схемы данных для Auth сервиса.
+"""
+
+from pydantic import BaseModel, Field
+from typing import Optional
 from enum import Enum
 
 
 class UserRole(str, Enum):
-    STUDENT = "student"
-    STAFF = "staff"
+    USER = "user"
     ADMIN = "admin"
 
 
-# ========== USER SCHEMAS ==========
+# ========== AUTH SCHEMAS ==========
 
-# Для логина
 class LoginRequest(BaseModel):
-    hse_email: EmailStr
-    password: str
+    """Запрос на авторизацию"""
+    user_id: int = Field(..., description="ID пользователя из userStatistic")
+    password: str = Field(..., min_length=1, description="Пароль")
 
 
-# Для создания пользователя админом
-class UserCreateByAdmin(BaseModel):
-    hse_email: EmailStr
-    telegram_id: Optional[str] = None
-    role: UserRole = UserRole.STUDENT
-    password: str = Field(..., min_length=6, description="Минимум 6 символов")
-    full_name: str = Field(..., min_length=2, description="ФИО пользователя")
-    student_id: Optional[str] = None
-    profile_photo: Optional[str] = None
+class AuthCreate(BaseModel):
+    """Создание записи аутентификации"""
+    user_id: int = Field(..., description="ID пользователя из userStatistic")
+    password: str = Field(..., min_length=6, description="Пароль (минимум 6 символов)")
+    role: UserRole = Field(UserRole.USER, description="Роль пользователя")
 
 
-# Для обновления пользователя
-class UserUpdate(BaseModel):
-    telegram_id: Optional[str] = None
-    role: Optional[UserRole] = None
-    password: Optional[str] = Field(None, min_length=6)
-    full_name: Optional[str] = Field(None, min_length=2)
-    student_id: Optional[str] = None
-    profile_photo: Optional[str] = None
-    is_active: Optional[bool] = None
+class AuthUpdate(BaseModel):
+    """Обновление записи аутентификации"""
+    password: Optional[str] = Field(None, min_length=6, description="Новый пароль")
+    role: Optional[UserRole] = Field(None, description="Новая роль")
 
 
-# Ответ с информацией о пользователе
-class UserResponse(BaseModel):
-    id: int
-    hse_email: str
-    telegram_id: Optional[str]
+class AuthResponse(BaseModel):
+    """Ответ с информацией об аутентификации"""
+    user_id: int
     role: str
-    full_name: str
-    student_id: Optional[str]
-    is_active: bool
-    profile_photo: Optional[str]
-    created_at: datetime
-    created_by: Optional[int]
+    created_at: str
+    updated_at: str
 
     class Config:
         from_attributes = True
 
 
-# Список пользователей
-class UserListResponse(BaseModel):
-    users: List[UserResponse]
-    total: int
-    skip: int
-    limit: int
-
-
 # ========== TOKEN SCHEMAS ==========
 
-# Для запроса обновления токена
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
-
-
-# Токены + информация о пользователе
 class Token(BaseModel):
+    """JWT токены"""
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
-    user: UserResponse
+    expires_in: int = Field(..., description="Время жизни access токена в секундах")
 
 
-# Только токены (без user)
-class TokenPair(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-
-# Данные в payload токена
 class TokenPayload(BaseModel):
-    sub: Optional[str] = None  # email пользователя
-    exp: Optional[int] = None  # время истечения
-    type: Optional[str] = None  # access/refresh
-    jti: Optional[str] = None  # идентификатор токена
+    """Содержимое JWT токена"""
+    user_id: int
+    role: str
+    exp: int
+    iat: int
+    type: str  # "access" или "refresh"
+
+    class Config:
+        from_attributes = True
 
 
-# ========== RESPONSE SCHEMAS ==========
-
-class LoginResponse(BaseModel):
-    user: UserResponse
-    tokens: Token
+class RefreshTokenRequest(BaseModel):
+    """Запрос обновления токена"""
+    refresh_token: str = Field(..., description="Refresh токен")
 
 
-class MessageResponse(BaseModel):
-    message: str
-    success: bool = True
-
-
-class ErrorResponse(BaseModel):
-    detail: str
-    error_code: Optional[str] = None
-
-
-# ========== HEALTH CHECK ==========
-
-class HealthCheck(BaseModel):
-    status: str
-    timestamp: datetime
-    database: str = "connected"
-    service: str = "auth"
+class ChangePasswordRequest(BaseModel):
+    """Запрос смены пароля пользователем"""
+    current_password: str = Field(..., min_length=1, description="Текущий пароль")
+    new_password: str = Field(..., min_length=6, description="Новый пароль (минимум 6 символов)")

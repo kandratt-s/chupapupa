@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from auth import decode_token
-from crud import get_user_by_email
+from crud import get_auth_by_user_id
 from database import get_db
 
 security = HTTPBearer()
@@ -25,7 +25,7 @@ def get_current_user(
                 detail="Invalid token"
             )
 
-        user = get_user_by_email(db, email)
+        user = get_auth_by_user_id(db, id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

@@ -1,97 +1,69 @@
+"""
+CRUD операции для Auth сервиса.
+"""
+
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
-from models import User
-from schemas import UserCreateByAdmin, UserUpdate
+from models import Auth
+from schemas import AuthCreate, AuthUpdate
 from auth import get_password_hash, verify_password
-from datetime import datetime
+from typing import Optional
 
 
-def get_user_by_email(db: Session, email: str):
-    """Получает пользователя по email"""
-    return db.query(User).filter(User.hse_email == email).first()
+def get_auth_by_user_id(db: Session, user_id: int) -> Optional[Auth]:
+    """Получает запись аутентификации по user_id"""
+    return db.query(Auth).filter(Auth.user_id == user_id).first()
 
 
-def get_user_by_id(db: Session, user_id: int):
-    """Получает пользователя по ID"""
-    return db.query(User).filter(User.id == user_id).first()
-
-
-def create_user_by_admin(db: Session, user_data: UserCreateByAdmin, admin_id: int):
-    """Админ создает нового пользователя"""
-    # Проверяем, существует ли пользователь с таким email
-    existing_user = get_user_by_email(db, user_data.hse_email)
-    if existing_user:
-        raise ValueError("User with this email already exists")
-
+def create_auth(db: Session, auth_data: AuthCreate) -> Auth:
+    """Создает новую запись аутентификации"""
+    # Проверяем, что пользователь с таким user_id не существует
+    existing_auth = get_auth_by_user_id(db, auth_data.user_id)
+    if existing_auth:
+        raise ValueError(f"Auth record for user_id {auth_data.user_id} already exists")
+    
     # Хешируем пароль
-    hashed_password = get_password_hash(user_data.password)
-
-    # Создаем пользователя
-    user = User(
-        hse_email=user_data.hse_email,
-        telegram_id=user_data.telegram_id,
-        role=user_data.role.value,  # Используем .value для Enum
-        hashed_password=hashed_password,
-        full_name=user_data.full_name,
-        student_id=user_data.student_id,
-        profile_photo=user_data.profile_photo,
-        created_by=admin_id,
-        is_active=True
+    hashed_password = get_password_hash(auth_data.password)
+    
+    # Создаем запись
+    auth_record = Auth(
+        user_id=auth_data.user_id,
+        password_hash=hashed_password,
+        role=auth_data.role.value
     )
-
-    db.add(user)
+    
+    db.add(auth_record)
     db.commit()
-    db.refresh(user)
-    return user
+    db.refresh(auth_record)
+    return auth_record
 
 
-def update_user(db: Session, user_id: int, user_data: UserUpdate):
-    """Обновляет пользователя"""
-    user = get_user_by_id(db, user_id)
-    if not user:
+def update_auth(db: Session, user_id: int, auth_data: AuthUpdate) -> Optional[Auth]:
+    """Обновляет запись аутентификации"""
+    auth_record = get_auth_by_user_id(db, user_id)
+    if not auth_record:
         return None
-
-    update_dict = user_data.dict(exclude_unset=True)
-
-    # Если обновляется пароль - хешируем его
-    if "password" in update_dict and update_dict["password"]:
-        update_dict["hashed_password"] = get_password_hash(update_dict.pop("password"))
-
-    # Если обновляется роль - используем .value для Enum
-    if "role" in update_dict and update_dict["role"]:
-        update_dict["role"] = update_dict["role"].value
+    
+    # Собираем данные для обновления
+    update_dict = {}
+    if auth_data.password is not None:
+        update_dict["password_hash"] = get_password_hash(auth_data.password)
+    if auth_data.role is not None:
+        update_dict["role"] = auth_data.role.value
 
     # Обновляем поля
     for field, value in update_dict.items():
-        setattr(user, field, value)
+        setattr(auth_record, field, value)
 
     db.commit()
-    db.refresh(user)
-    return user
+    db.refresh(auth_record)
+    return auth_record
 
 
-def authenticate_user(db: Session, email: str, password: str):
-    """Аутентифицирует пользователя"""
-    user = get_user_by_email(db, email)
-    if not user:
+def authenticate_user(db: Session, user_id: int, password: str) -> Optional[Auth]:
+    """Аутентифицирует пользователя по user_id и паролю"""
+    auth_record = get_auth_by_user_id(db, user_id)
+    if not auth_record:
         return None
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, auth_record.password_hash):
         return None
-    if not user.is_active:
-        return None
-    return user
-
-
-def get_all_users(db: Session, skip: int = 0, limit: int = 100):
-    """Получает всех пользователей"""
-    return db.query(User).offset(skip).limit(limit).all()
-
-
-def deactivate_user(db: Session, user_id: int):
-    """Деактивирует пользователя"""
-    user = get_user_by_id(db, user_id)
-    if user:
-        user.is_active = False
-        db.commit()
-        return True
-    return False
+    return auth_record
