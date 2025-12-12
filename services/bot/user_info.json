@@ -1,3 +1,38 @@
 {
-   
+   "rrr@mail.ru": {
+      "first_name": "RRR",
+      "last_name": "RRR",
+      "email": "rrr@mail.ru",
+      "password_hash": "1c00f82ac10ab05699d63b966afc40a02793b3090323678990dd68e75b027813",
+      "role": "admin",
+      "student_photo_path": "photos\\rrr@mail.ru_1765564066_base.jpg",
+      "student_photo_id": "AgACAgIAAxkBAAIE3Gk8QNL0GkfPiWp96goZXIgCGLbZAAJWDGsbtt7oSamixlTv0kXxAQADAgADeAADNgQ"
+   },
+   "RRR2@mail.ru": {
+      "first_name": "RaR",
+      "last_name": "-",
+      "email": "RRR2@mail.ru",
+      "password_hash": "05f487eb48bd370c260e7b5a1b9c625ed1ba37e968ecd2186d758371403d3e7a",
+      "role": "student",
+      "student_photo_path": "photos\\RRR2@mail.ru_1765564120_base.jpg",
+      "student_photo_id": "AgACAgIAAxkBAAIE2Wk8QIx61_9EHlzeaI8MumHtuW_5AAJSDGsbtt7oSfIU6Bnu8cl9AQADAgADbQADNgQ"
+   },
+   "meow@mail.ru": {
+      "first_name": "Meow",
+      "last_name": "Meow",
+      "email": "meow@mail.ru",
+      "password_hash": "00c9fa98d2340fec5a0bc037de368d03310b94e18cee1534b6d7f2d1d4b9ae22",
+      "role": "student",
+      "student_photo_path": "photos\\meow@mail.ru_1765564170_base.jpg",
+      "student_photo_id": "AgACAgIAAxkBAAIE2Wk8QIx61_9EHlzeaI8MumHtuW_5AAJSDGsbtt7oSfIU6Bnu8cl9AQADAgADbQADNgQ"
+   },
+   "admin2@mail.ru": {
+      "first_name": "Admin2",
+      "last_name": "None",
+      "email": "admin2@mail.ru",
+      "password_hash": "f3411120b941ea91dfe2dc91fbb7d6cadca17a93fe769b34626ce65cf44382d9",
+      "role": "admin",
+      "student_photo_path": null,
+      "student_photo_id": null
+   }
 }
