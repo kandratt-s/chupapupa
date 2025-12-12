@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: chupapupaZXC
       POSTGRES_DB: chupapupa_pj
     volumes:
-      #- postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"

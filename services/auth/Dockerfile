@@ -9,6 +9,8 @@ COPY ./services/auth/requirements.txt ./requirements-local.txt
 RUN pip install --no-cache-dir -r requirements-local.txt
 
 COPY ./services/auth .
+COPY ./shared ./shared
+ENV PYTHONPATH=/app:$PYTHONPATH
 
 # без этой хуйни хацкеры могут делать бобо
 RUN adduser --disabled-password --gecos '' appuser \

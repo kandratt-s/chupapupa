@@ -3,12 +3,14 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from pydantic_settings import BaseSettings
+from sqlalchemy import NullPool
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool
 
 
 class DatabaseSettings(BaseSettings):
+    """Database configuration for Event service."""
+
     model_config = {
         "env_file": Path(__file__).parent / ".env",
         "env_file_encoding": "utf-8",
@@ -22,13 +24,13 @@ class DatabaseSettings(BaseSettings):
     sync_database_url: str = os.getenv(
         "EVENT_SYNC_DATABASE_URL",
         "postgresql://event_user:event_pass@postgres:5432/chupapupa_pj",
-    )  # Для Alembic
+    )
     schema_name: str = os.getenv("EVENT_SCHEMA_NAME", "event_service")
 
 
 settings = DatabaseSettings()
 
-
+# Create async engine
 engine = create_async_engine(
     settings.database_url,
     future=True,
@@ -36,10 +38,16 @@ engine = create_async_engine(
     connect_args={"server_settings": {"search_path": settings.schema_name}},
 )
 
+# Create session factory
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Get database session.
+
+    Yields:
+        AsyncSession: Database session.
+    """
     async with AsyncSessionLocal() as session:
         try:
             yield session

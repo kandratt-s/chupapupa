@@ -8,7 +8,10 @@ RUN pip install --no-cache-dir -r requirements-base.txt
 COPY ./services/attendance/requirements.txt ./requirements-local.txt
 RUN pip install --no-cache-dir -r requirements-local.txt
 
+COPY ./shared ./shared
 COPY ./services/attendance .
+
+ENV PYTHONPATH=/app:$PYTHONPATH
 
 RUN adduser --disabled-password --gecos '' appuser \
     && chown -R appuser:appuser /app

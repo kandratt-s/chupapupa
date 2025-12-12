@@ -24,6 +24,16 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA attendance_service TO attendance_us
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA attendance_service TO attendance_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA attendance_service GRANT ALL ON TABLES TO attendance_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA attendance_service GRANT ALL ON SEQUENCES TO attendance_user;
+-- Attendance needs read/reference access to events
+GRANT USAGE ON SCHEMA event_service TO attendance_user;
+GRANT SELECT, REFERENCES ON ALL TABLES IN SCHEMA event_service TO attendance_user;
+ALTER DEFAULT PRIVILEGES FOR ROLE event_user IN SCHEMA event_service
+    GRANT SELECT, REFERENCES ON TABLES TO attendance_user;
+
+-- Allow attendance service to read and reference events
+GRANT USAGE ON SCHEMA event_service TO attendance_user;
+GRANT SELECT, REFERENCES ON ALL TABLES IN SCHEMA event_service TO attendance_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA event_service GRANT SELECT, REFERENCES ON TABLES TO attendance_user;
 
 CREATE SCHEMA IF NOT EXISTS user_statistic_service;
 CREATE USER user_statistic_user WITH PASSWORD 'user_statistic_pass';
@@ -48,19 +58,3 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA cv_service TO cv_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA cv_service TO cv_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA cv_service GRANT ALL ON TABLES TO cv_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA cv_service GRANT ALL ON SEQUENCES TO cv_user;
-
-CREATE SCHEMA IF NOT EXISTS bot_service;
-CREATE USER bot_user WITH PASSWORD 'bot_pass';
-GRANT USAGE, CREATE ON SCHEMA bot_service TO bot_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA bot_service TO bot_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA bot_service TO bot_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA bot_service GRANT ALL ON TABLES TO bot_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA bot_service GRANT ALL ON SEQUENCES TO bot_user;
-
-CREATE SCHEMA IF NOT EXISTS web_service;
-CREATE USER web_user WITH PASSWORD 'web_pass';
-GRANT USAGE, CREATE ON SCHEMA web_service TO web_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA web_service TO web_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA web_service TO web_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA web_service GRANT ALL ON TABLES TO web_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA web_service GRANT ALL ON SEQUENCES TO web_user;

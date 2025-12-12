@@ -5,10 +5,11 @@ from pathlib import Path
 from pydantic_settings import BaseSettings
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool
 
 
 class DatabaseSettings(BaseSettings):
+    """Database configuration for Admin service."""
+
     model_config = {
         "env_file": Path(__file__).parent / ".env",
         "env_file_encoding": "utf-8",
@@ -22,24 +23,40 @@ class DatabaseSettings(BaseSettings):
     sync_database_url: str = os.getenv(
         "ADMIN_SYNC_DATABASE_URL",
         "postgresql://admin_user:admin_pass@postgres:5432/chupapupa_pj",
-    )  # Для Alembic
+    )
     schema_name: str = os.getenv("ADMIN_SCHEMA_NAME", "admin_service")
+    pool_size: int = 10
+    max_overflow: int = 20
+    echo: bool = False
 
 
 settings = DatabaseSettings()
 
-
+# Create async engine
 engine = create_async_engine(
     settings.database_url,
-    future=True,
-    poolclass=NullPool,
+    echo=settings.echo,
+    pool_size=settings.pool_size,
+    max_overflow=settings.max_overflow,
+    pool_pre_ping=True,
     connect_args={"server_settings": {"search_path": settings.schema_name}},
 )
 
-AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+# Create session factory
+AsyncSessionLocal = sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False,
+)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Get database session.
+
+    Yields:
+        AsyncSession: Database session.
+    """
     async with AsyncSessionLocal() as session:
         try:
             yield session

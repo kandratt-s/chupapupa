@@ -1,3 +1,6 @@
+"""Alembic configuration for Admin service."""
+# ruff: noqa: E402
+
 import os
 import sys
 from logging.config import fileConfig
@@ -5,31 +8,25 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool, text
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+app_dir = os.path.dirname(current_dir)  # /app
+sys.path.insert(0, app_dir)
 
-try:
-    from db import settings
+from db import settings
+from shared.base_model import Base
 
-    database_url = settings.sync_database_url
-    schema_name = settings.schema_name
-    print(f"Alembic: Using database URL: {database_url}")
-    print(f"Alembic: Using schema: {schema_name}")
-except ImportError as e:
-    print(f"Error importing settings from db.py: {e}")
-    database_url = os.getenv(
-        "ADMIN_SYNC_DATABASE_URL",
-        "postgresql://admin_user:admin_pass@postgres:5432/chupapupa_pj",
-    )
-    schema_name = os.getenv("ADMIN_SCHEMA_NAME", "admin_service")
+# Get configuration
+database_url = settings.sync_database_url
+schema_name = settings.schema_name
 
 config = context.config
-
 config.set_main_option("sqlalchemy.url", database_url)
 
+# Configure logging if config file exists
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:

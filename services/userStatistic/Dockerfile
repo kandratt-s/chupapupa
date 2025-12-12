@@ -9,6 +9,8 @@ COPY ./services/userStatistic/requirements.txt ./requirements-local.txt
 RUN pip install --no-cache-dir -r requirements-local.txt
 
 COPY ./services/userStatistic .
+COPY ./shared ./shared
+ENV PYTHONPATH=/app:$PYTHONPATH
 
 RUN adduser --disabled-password --gecos '' appuser \
     && chown -R appuser:appuser /app
