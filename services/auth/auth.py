@@ -11,12 +11,10 @@ import os
 import secrets
 
 # Конфигурация с безопасными значениями по умолчанию
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    raise ValueError(
-        "SECRET_KEY environment variable is required. "
-        "Generate a secure key with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
-    )
+SECRET_KEY = os.getenv("SECRET_KEY", "development-secret-key-change-in-production-12345")
+
+if SECRET_KEY == "development-secret-key-change-in-production-12345":
+    print("⚠️  Warning: Using development SECRET_KEY. Change it in production!")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))  # Короче по умолчанию
