@@ -74,9 +74,7 @@ def safe_log_error(context: str, exc: Exception) -> None:
 
 
 async def delete_message_safe(chat_id, message_id, bot=None):
-    """
-    Безопасное удаление сообщения.
-    """
+    """Безопасное удаление сообщения."""
     if not bot:
         return
     try:

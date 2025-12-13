@@ -42,6 +42,10 @@ class FSM:
         st["prompts"] = []
         _save()
 
+    async def log(self, bot: Bot, chat_id: int, text: str):
+        """Лог-сообщение без кнопок (остаётся в чате)."""
+        await bot.send_message(chat_id, text)
+
     async def show_menu(self, bot: Bot, chat_id: int, text: str, kb):
         st = _st(self.uid)
         old_menu_id = st.get("menu_id")
@@ -52,21 +56,9 @@ class FSM:
             except:
                 pass
 
-        try:
-            await bot.edit_message_reply_markup(chat_id, chat_id, reply_markup=None)
-        except:
-            pass
-
         msg = await bot.send_message(chat_id, text, reply_markup=kb)
         st["menu_id"] = msg.message_id
         _save()
-
-    async def final(self, bot: Bot, chat_id: int, text: str):
-        await bot.send_message(chat_id, text)
-
-    async def log(self, bot: Bot, chat_id: int, text: str):
-        """Отправляет лог-сообщение без кнопок (остаётся в чате)."""
-        await bot.send_message(chat_id, text)
 
 
 def fsm(uid: str) -> FSM:

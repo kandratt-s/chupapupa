@@ -39,15 +39,80 @@ async def start(message: types.Message):
     # Полный сброс FSM
     f.clear()
 
-    # Определяем роль и показываем единое меню
-    role = tokens.get(uid, {}).get("role")
-    token = tokens.get(uid, {}).get("token")
+    # Определяем роль и токен
+    user_data = tokens.get(uid, {})
+    role = user_data.get("role")
+    token = user_data.get("token")
 
+    # ЕДИНОЕ МЕНЮ (без приветствий с именем!)
     if role == "admin" and token:
         await f.show_menu(message.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
     elif role == "student" and token:
         await f.show_menu(message.bot, chat_id, "🎓 Меню студента", build_user_menu())
     else:
-        await f.show_menu(
-            message.bot, chat_id, "👋 Привет! Войдите в систему:", login_kb()
-        )
+        await f.show_menu(message.bot, chat_id, "👋 Войдите в систему:", login_kb())
+
+
+# ================================================================
+# ПРОФИЛЬ
+# ================================================================
+@auth_router.callback_query(lambda c: c.data == "btn_profile")
+async def cb_profile(callback: types.CallbackQuery):
+    uid = str(callback.from_user.id)
+    chat_id = callback.message.chat.id
+
+    user_data = tokens.get(uid, {})
+    email = user_data.get("email", "—")
+    role = user_data.get("role", "—")
+    points = user_data.get("practice_points", 0)
+
+    role_text = "👑 Администратор" if role == "admin" else "🎓 Студент"
+
+    text = (
+        f"👤 Профиль\n\n"
+        f"📧 Email: {email}\n"
+        f"🎭 Роль: {role_text}\n"
+        f"⭐️ Баллы практики: {points}"
+    )
+
+    kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                types.InlineKeyboardButton(
+                    text="◀️ В меню", callback_data="btn_back_to_menu"
+                )
+            ]
+        ]
+    )
+
+    await callback.message.edit_text(text, reply_markup=kb)
+    await callback.answer()
+
+
+# ================================================================
+# ВЫХОД
+# ================================================================
+@auth_router.callback_query(lambda c: c.data == "btn_logout")
+async def cb_logout(callback: types.CallbackQuery):
+    uid = str(callback.from_user.id)
+    chat_id = callback.message.chat.id
+    f = fsm(uid)
+
+    # Удаляем токен (но сохраняем данные)
+    if uid in tokens:
+        tokens[uid]["token"] = None
+
+    from services.bot.local_bot.storage import save_tokens
+
+    save_tokens()
+
+    f.clear()
+
+    try:
+        await callback.message.delete()
+    except:
+        pass
+
+    await f.log(callback.bot, chat_id, "👋 Вы вышли из системы")
+    await f.show_menu(callback.bot, chat_id, "👋 Войдите в систему:", login_kb())
+    await callback.answer()

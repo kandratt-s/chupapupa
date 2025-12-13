@@ -13,13 +13,12 @@ async def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
 
-    # Убран глобальный фильтр NotCommand — он блокировал команды
-
+    # Порядок важен! auth первым
     dp.include_router(auth_router)
-    dp.include_router(student_router)
     dp.include_router(admin_events_router)
     dp.include_router(admin_users_router)
     dp.include_router(admin_apps_router)
+    dp.include_router(student_router)
     dp.include_router(common_router)
 
     await dp.start_polling(bot)

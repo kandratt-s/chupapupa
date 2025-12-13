@@ -34,5 +34,14 @@
       "role": "student",
       "student_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\test2@mail.ru_1765574713_base.jpg",
       "student_photo_id": "AgACAgIAAxkBAAIGOmk8fByQYNZCQn9yjPSAj4j1CS_8AAIQDmsbtt7oSZXO897GWeQ0AQADAgADbQADNgQ"
+   },
+   "test123@mail.ru": {
+      "first_name": "Test123",
+      "last_name": "mailru",
+      "email": "test123@mail.ru",
+      "password_hash": "e6690ca87bee89be0ccde7e91494f1d2e2a561f9172f9cdfb55ecd22824b66e2",
+      "role": "student",
+      "student_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\test123@mail.ru_1765617832_base.jpg",
+      "student_photo_id": "AgACAgIAAxkBAAIH8mk9MKe_bIUyPbvmopsGit0_IrtdAAJCDGsbtt7wST2ex882EI-NAQADAgADbQADNgQ"
    }
 }

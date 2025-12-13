@@ -1,7 +1,5 @@
-# handlers/admin_users.py
 """
-Админ: создание пользователей, список студентов, просмотр, удаление.
-Новый стиль: единый FSM, чистые сообщения, исчезающие ошибки.
+Админ: создание пользователей.
 """
 
 import time
@@ -19,7 +17,6 @@ from services.bot.local_bot.storage import (
 from services.bot.local_bot.fsm import fsm
 from services.bot.local_bot.keyboards import (
     cancel_kb,
-    back_to_menu_kb,
     build_admin_menu,
 )
 from services.bot.local_bot.utils import (
@@ -34,9 +31,6 @@ from services.bot.local_bot.config import PHOTOS_DIR
 admin_users_router = Router()
 
 
-# ================================================================
-# ВСПОМОГАТЕЛЬНЫЕ
-# ================================================================
 def is_admin(uid: str) -> bool:
     u = tokens.get(uid)
     return bool(u and u.get("role") == "admin")
@@ -58,11 +52,16 @@ async def cb_admin_register(callback: types.CallbackQuery):
     f.clear()
     f.set(state="reg_email")
 
-    msg = await callback.message.answer(
-        "📧 Введите email нового пользователя:", reply_markup=cancel_kb()
+    # Удаляем меню
+    try:
+        await callback.message.delete()
+    except:
+        pass
+
+    msg = await callback.bot.send_message(
+        chat_id, "📧 Введите email нового пользователя:", reply_markup=cancel_kb()
     )
     f.add_prompt(msg.message_id)
-
     await callback.answer()
 
 
@@ -75,6 +74,13 @@ async def reg_email(message: types.Message):
     chat_id = message.chat.id
     f = fsm(uid)
 
+    st = f.get()
+    if st.get("state") != "reg_email":
+        return
+
+    if message.text and message.text.startswith("/"):
+        return
+
     try:
         await message.delete()
     except:
@@ -85,13 +91,13 @@ async def reg_email(message: types.Message):
     if not validate_mail(email):
         err = await message.answer("❌ Некорректный email")
         await asyncio.sleep(1.2)
-        await delete_message_safe(chat_id, err.message_id)
+        await delete_message_safe(chat_id, err.message_id, message.bot)
         return
 
     if email in user_info:
         err = await message.answer("❌ Такой email уже зарегистрирован")
         await asyncio.sleep(1.2)
-        await delete_message_safe(chat_id, err.message_id)
+        await delete_message_safe(chat_id, err.message_id, message.bot)
         return
 
     f.set(email=email, state="reg_firstname")
@@ -109,6 +115,13 @@ async def reg_firstname(message: types.Message):
     uid = str(message.from_user.id)
     chat_id = message.chat.id
     f = fsm(uid)
+
+    st = f.get()
+    if st.get("state") != "reg_firstname":
+        return
+
+    if message.text and message.text.startswith("/"):
+        return
 
     try:
         await message.delete()
@@ -132,6 +145,13 @@ async def reg_lastname(message: types.Message):
     chat_id = message.chat.id
     f = fsm(uid)
 
+    st = f.get()
+    if st.get("state") != "reg_lastname":
+        return
+
+    if message.text and message.text.startswith("/"):
+        return
+
     try:
         await message.delete()
     except:
@@ -143,25 +163,13 @@ async def reg_lastname(message: types.Message):
 
     kb = types.InlineKeyboardMarkup(
         inline_keyboard=[
-            [
-                types.InlineKeyboardButton(
-                    text="🎓 Студент", callback_data="reg_role:student"
-                )
-            ],
-            [
-                types.InlineKeyboardButton(
-                    text="👑 Администратор", callback_data="reg_role:admin"
-                )
-            ],
-            [
-                types.InlineKeyboardButton(
-                    text="❌ Отменить", callback_data="btn_cancel"
-                )
-            ],
+            [types.InlineKeyboardButton(text="🎓 Студент", callback_data="reg_role:student")],
+            [types.InlineKeyboardButton(text="👑 Администратор", callback_data="reg_role:admin")],
+            [types.InlineKeyboardButton(text="❌ Отменить", callback_data="btn_cancel")],
         ]
     )
 
-    msg = await message.answer("Выберите роль:", reply_markup=kb)
+    msg = await message.answer("🎭 Выберите роль:", reply_markup=kb)
     f.add_prompt(msg.message_id)
 
 
@@ -172,14 +180,20 @@ async def reg_role(callback: types.CallbackQuery):
     chat_id = callback.message.chat.id
     f = fsm(uid)
 
+    st = f.get()
+    if st.get("state") != "reg_role":
+        await callback.answer()
+        return
+
     role = callback.data.split(":")[1]
     f.set(role=role, state="reg_password")
 
     await f.clear_prompts(callback.bot, chat_id)
 
-    msg = await callback.message.answer("🔑 Введите пароль:", reply_markup=cancel_kb())
+    msg = await callback.bot.send_message(
+        chat_id, "🔑 Введите пароль:", reply_markup=cancel_kb()
+    )
     f.add_prompt(msg.message_id)
-
     await callback.answer()
 
 
@@ -192,6 +206,13 @@ async def reg_password(message: types.Message):
     chat_id = message.chat.id
     f = fsm(uid)
 
+    st = f.get()
+    if st.get("state") != "reg_password":
+        return
+
+    if message.text and message.text.startswith("/"):
+        return
+
     try:
         await message.delete()
     except:
@@ -200,25 +221,23 @@ async def reg_password(message: types.Message):
     pwd = message.text.strip()
 
     if not validate_password(pwd):
-        err = await message.answer("❌ Пароль слишком слабый")
-        await asyncio.sleep(1.2)
-        await delete_message_safe(chat_id, err.message_id)
+        err = await message.answer("❌ Слабый пароль (мин. 8 символов, буквы, цифры, спецсимволы)")
+        await asyncio.sleep(1.5)
+        await delete_message_safe(chat_id, err.message_id, message.bot)
         return
 
     f.set(password=pwd)
 
-    # Если админ — фото не нужно
-    if f.get().get("role") == "admin":
-        await create_admin_user(uid, message)
+    # Если админ — без фото
+    if st.get("role") == "admin":
+        await create_user_final(uid, message, with_photo=False)
         return
 
-    # Если студент — фото обязательно
+    # Если студент — нужно фото
     f.set(state="reg_photo")
     await f.clear_prompts(message.bot, chat_id)
 
-    msg = await message.answer(
-        "📸 Отправьте фото пользователя:", reply_markup=cancel_kb()
-    )
+    msg = await message.answer("📸 Отправьте фото пользователя:", reply_markup=cancel_kb())
     f.add_prompt(msg.message_id)
 
 
@@ -230,7 +249,10 @@ async def reg_photo(message: types.Message):
     uid = str(message.from_user.id)
     chat_id = message.chat.id
     f = fsm(uid)
+
     st = f.get()
+    if st.get("state") != "reg_photo":
+        return
 
     try:
         await message.delete()
@@ -239,12 +261,7 @@ async def reg_photo(message: types.Message):
 
     ensure_photos_dir()
 
-    email = st["email"]
-    firstname = st["firstname"]
-    lastname = st["lastname"]
-    role = st["role"]
-    pwd = st["password"]
-
+    email = st.get("email")
     filename = f"{email}_{int(time.time())}_base.jpg"
     path = os.path.join(PHOTOS_DIR, filename)
 
@@ -254,9 +271,7 @@ async def reg_photo(message: types.Message):
     # Скачиваем фото
     try:
         file_obj = await message.bot.get_file(file_id)
-        url = (
-            f"https://api.telegram.org/file/bot{message.bot.token}/{file_obj.file_path}"
-        )
+        url = f"https://api.telegram.org/file/bot{message.bot.token}/{file_obj.file_path}"
 
         async with httpx.AsyncClient() as client:
             resp = await client.get(url)
@@ -269,8 +284,28 @@ async def reg_photo(message: types.Message):
         except:
             err = await message.answer("❌ Не удалось сохранить фото")
             await asyncio.sleep(1.2)
-            await delete_message_safe(chat_id, err.message_id)
+            await delete_message_safe(chat_id, err.message_id, message.bot)
             return
+
+    f.set(photo_path=path, photo_id=file_id)
+    await create_user_final(uid, message, with_photo=True)
+
+
+# ================================================================
+# ФИНАЛИЗАЦИЯ СОЗДАНИЯ
+# ================================================================
+async def create_user_final(admin_uid: str, message: types.Message, with_photo: bool):
+    chat_id = message.chat.id
+    f = fsm(admin_uid)
+    st = f.get()
+
+    email = st.get("email")
+    firstname = st.get("firstname")
+    lastname = st.get("lastname")
+    role = st.get("role")
+    pwd = st.get("password")
+    photo_path = st.get("photo_path") if with_photo else None
+    photo_id = st.get("photo_id") if with_photo else None
 
     # Создаём пользователя
     user_info[email] = {
@@ -279,58 +314,20 @@ async def reg_photo(message: types.Message):
         "email": email,
         "password_hash": hash_password(pwd),
         "role": role,
-        "student_photo_path": path,
-        "student_photo_id": file_id,
-    }
-    save_user_info()
-
-    f.clear()
-
-    # ЛОГ
-    await f.log(
-        message.bot,
-        chat_id,
-        f"✅ Студент создан:\n{firstname} {lastname}\n📧 {email}",
-    )
-
-    # МЕНЮ
-    await f.show_menu(message.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
-
-
-
-# ================================================================
-# СОЗДАНИЕ АДМИНА (без фото)
-# ================================================================
-async def create_admin_user(uid: str, message: types.Message):
-    chat_id = message.chat.id
-    f = fsm(uid)
-    st = f.get()
-
-    email = st["email"]
-    firstname = st["firstname"]
-    lastname = st["lastname"]
-    pwd = st["password"]
-
-    user_info[email] = {
-        "first_name": firstname,
-        "last_name": lastname,
-        "email": email,
-        "password_hash": hash_password(pwd),
-        "role": "admin",
-        "student_photo_path": None,
-        "student_photo_id": None,
+        "student_photo_path": photo_path,
+        "student_photo_id": photo_id,
     }
     save_user_info()
 
     await f.clear_prompts(message.bot, chat_id)
     f.clear()
 
-    # ЛОГ
+    role_text = "👑 Администратор" if role == "admin" else "🎓 Студент"
+
+    # ЛОГ + МЕНЮ
     await f.log(
         message.bot,
         chat_id,
-        f"✅ Администратор создан:\n{firstname} {lastname}\n📧 {email}",
+        f"✅ Пользователь создан:\n{firstname} {lastname}\n📧 {email}\n{role_text}",
     )
-
-    # МЕНЮ
     await f.show_menu(message.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
