@@ -58,7 +58,8 @@ def build_admin_menu():
             [btn("➕ Создать мероприятие", "btn_create_event")],
             [btn("📅 Мероприятия", "btn_list_events")],
             [btn(f"📥 Заявки ({pending})", "btn_review_applications")],
-            [btn("👥 Создать пользователя", "btn_admin_register")],
+            [btn("👥 Пользователи", "btn_list_users")],
+            [btn("➕ Создать пользователя", "btn_admin_register")],
             [btn("👤 Профиль", "btn_profile")],
             [btn("🚪 Выйти", "btn_logout")],
         ]

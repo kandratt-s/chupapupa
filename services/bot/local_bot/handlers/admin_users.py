@@ -17,6 +17,7 @@ from services.bot.local_bot.storage import (
 from services.bot.local_bot.fsm import fsm
 from services.bot.local_bot.keyboards import (
     cancel_kb,
+    back_to_menu_kb,
     build_admin_menu,
 )
 from services.bot.local_bot.utils import (
@@ -331,3 +332,226 @@ async def create_user_final(admin_uid: str, message: types.Message, with_photo: 
         f"✅ Пользователь создан:\n{firstname} {lastname}\n📧 {email}\n{role_text}",
     )
     await f.show_menu(message.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
+
+# ================================================================
+# СПИСОК ПОЛЬЗОВАТЕЛЕЙ
+# ================================================================
+@admin_users_router.callback_query(lambda c: c.data == "btn_list_users")
+async def cb_list_users(callback: types.CallbackQuery):
+    uid = str(callback.from_user.id)
+
+    if not is_admin(uid):
+        await callback.answer("❌ Только администратор")
+        return
+
+    f = fsm(uid)
+    f.clear()
+    f.set(filter="all", page=0)
+
+    await show_users(callback.message, uid)
+    await callback.answer()
+
+
+async def show_users(message: types.Message, uid: str):
+    f = fsm(uid)
+    st = f.get()
+
+    filter_mode = st.get("filter", "all")
+    page = st.get("page", 0)
+
+    # Собираем всех пользователей
+    users = []
+    for email, data in user_info.items():
+        users.append({
+            "email": email,
+            "first_name": data.get("first_name", ""),
+            "last_name": data.get("last_name", ""),
+            "role": data.get("role", "student"),
+        })
+
+    # Фильтруем
+    if filter_mode == "students":
+        users = [u for u in users if u["role"] == "student"]
+    elif filter_mode == "admins":
+        users = [u for u in users if u["role"] == "admin"]
+
+    if not users:
+        try:
+            await message.edit_text("📭 Нет пользователей", reply_markup=back_to_menu_kb())
+        except:
+            pass
+        return
+
+    # Пагинация
+    per_page = 6
+    total_pages = (len(users) - 1) // per_page + 1
+    page = max(0, min(page, total_pages - 1))
+    f.set(page=page)
+
+    start = page * per_page
+    chunk = users[start : start + per_page]
+
+    rows = []
+    for u in chunk:
+        role_icon = "👑" if u["role"] == "admin" else "🎓"
+        name = f"{u['first_name']} {u['last_name']}".strip() or u["email"]
+        rows.append(
+            [types.InlineKeyboardButton(
+                text=f"{role_icon} {name}",
+                callback_data=f"user_card:{u['email']}"
+            )]
+        )
+
+    nav = []
+    if page > 0:
+        nav.append(types.InlineKeyboardButton(text="⬅️", callback_data="users_prev"))
+    if page < total_pages - 1:
+        nav.append(types.InlineKeyboardButton(text="➡️", callback_data="users_next"))
+
+    filter_row = [
+        types.InlineKeyboardButton(text="🔵 Все", callback_data="users_filter:all"),
+        types.InlineKeyboardButton(text="🎓 Студенты", callback_data="users_filter:students"),
+        types.InlineKeyboardButton(text="👑 Админы", callback_data="users_filter:admins"),
+    ]
+
+    rows_final = rows.copy()
+    if nav:
+        rows_final.append(nav)
+    rows_final.append(filter_row)
+    rows_final.append([types.InlineKeyboardButton(text="◀️ В меню", callback_data="btn_back_to_menu")])
+
+    kb = types.InlineKeyboardMarkup(inline_keyboard=rows_final)
+
+    try:
+        await message.edit_text("👥 Пользователи:", reply_markup=kb)
+    except:
+        pass
+
+
+# Пагинация
+@admin_users_router.callback_query(lambda c: c.data in ("users_prev", "users_next"))
+async def cb_users_nav(callback: types.CallbackQuery):
+    uid = str(callback.from_user.id)
+    f = fsm(uid)
+    st = f.get()
+
+    if callback.data == "users_prev":
+        f.set(page=st.get("page", 0) - 1)
+    else:
+        f.set(page=st.get("page", 0) + 1)
+
+    await show_users(callback.message, uid)
+    await callback.answer()
+
+
+# Фильтры
+@admin_users_router.callback_query(lambda c: c.data.startswith("users_filter:"))
+async def cb_users_filter(callback: types.CallbackQuery):
+    uid = str(callback.from_user.id)
+    mode = callback.data.split(":")[1]
+
+    f = fsm(uid)
+    f.set(filter=mode, page=0)
+
+    await show_users(callback.message, uid)
+    await callback.answer()
+
+
+# ================================================================
+# КАРТОЧКА ПОЛЬЗОВАТЕЛЯ
+# ================================================================
+@admin_users_router.callback_query(lambda c: c.data.startswith("user_card:"))
+async def cb_user_card(callback: types.CallbackQuery):
+    uid = str(callback.from_user.id)
+    email = callback.data.split(":", 1)[1]
+    user = user_info.get(email)
+    if not user:
+        await callback.answer("❌ Пользователь не найден")
+        return
+
+    first_name = user.get("first_name", "")
+    last_name = user.get("last_name", "")
+    role = user.get("role", "student")
+    role_text = "👑 Администратор" if role == "admin" else "🎓 Студент"
+
+    # Ищем баллы в tokens
+    points = 0
+    for tid, tdata in tokens.items():
+        if tdata.get("email") == email:
+            points = tdata.get("practice_points", 0)
+            break
+
+    text = (
+        f"👤 {first_name} {last_name}\n\n"
+        f"📧 Email: {email}\n"
+        f"🎭 Роль: {role_text}\n"
+        f"⭐️ Баллы: {points}"
+    )
+
+    kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [types.InlineKeyboardButton(text="🗑 Удалить", callback_data=f"user_delete:{email}")],
+            [types.InlineKeyboardButton(text="◀️ Назад", callback_data="btn_list_users")],
+        ]
+    )
+
+    await callback.message.edit_text(text, reply_markup=kb)
+    await callback.answer()
+
+
+# ================================================================
+# УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
+# ================================================================
+@admin_users_router.callback_query(lambda c: c.data.startswith("user_delete:"))
+async def cb_user_delete(callback: types.CallbackQuery):
+    email = callback.data.split(":", 1)[1]
+
+    user = user_info.get(email)
+    if not user:
+        await callback.answer("❌ Пользователь не найден")
+        return
+
+    name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or email
+
+    kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [types.InlineKeyboardButton(text="🗑 Да, удалить", callback_data=f"user_delete_confirm:{email}")],
+            [types.InlineKeyboardButton(text="◀️ Отмена", callback_data=f"user_card:{email}")],
+        ]
+    )
+
+    await callback.message.edit_text(f"❗️ Удалить пользователя?\n{name}", reply_markup=kb)
+    await callback.answer()
+
+
+@admin_users_router.callback_query(lambda c: c.data.startswith("user_delete_confirm:"))
+async def cb_user_delete_confirm(callback: types.CallbackQuery):
+    uid = str(callback.from_user.id)
+    chat_id = callback.message.chat.id
+    email = callback.data.split(":", 1)[1]
+
+    user = user_info.get(email)
+    name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() if user else email
+
+    # Удаляем из user_info
+    if email in user_info:
+        del user_info[email]
+        save_user_info()
+
+    # Удаляем токен
+    to_delete = [k for k, v in tokens.items() if v.get("email") == email]
+    for k in to_delete:
+        del tokens[k]
+    if to_delete:
+        save_tokens()
+
+    f = fsm(uid)
+
+    try:
+        await callback.message.delete()
+    except:
+        pass
+
+    await f.log(callback.bot, chat_id, f"🗑 Пользователь удалён:\n{name}")
+    await f.show_menu(callback.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
+    await callback.answer()

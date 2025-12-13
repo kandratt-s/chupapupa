@@ -54,6 +54,50 @@
          "status": "approved",
          "event_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\1470042403_1765619017_event.jpg",
          "event_photo_id": "AgACAgIAAxkBAAIIZmk9NUkNp0nx39CQjySBNprEycL2AAJzDGsbtt7wSUdqcr8BnwmQAQADAgADeQADNgQ"
+      },
+      {
+         "id": 1765619485,
+         "user_id": "1470042403",
+         "user_email": "diman@mail.ru",
+         "event_id": 1765617025,
+         "event_name": "noname",
+         "timestamp": 1765619485,
+         "status": "approved",
+         "event_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\1470042403_1765619484_event.jpg",
+         "event_photo_id": "AgACAgIAAxkBAAIIiGk9NxwzSU6tWyrPQ8_l6R4yhUJxAAJ3DGsbtt7wSR8R1II2zU0RAQADAgADeQADNgQ"
+      },
+      {
+         "id": 1765620069,
+         "user_id": "1470042403",
+         "user_email": "diman@mail.ru",
+         "event_id": 1765615723,
+         "event_name": "TEST1",
+         "timestamp": 1765620069,
+         "status": "approved",
+         "event_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\1470042403_1765620069_event.jpg",
+         "event_photo_id": "AgACAgIAAxkBAAIIA2k9Mhyz9EwIsZvQ4HoWhyg-UvDuAAJUDGsbtt7wSYn9jnjIYVkzAQADAgADeAADNgQ"
+      },
+      {
+         "id": 1765620121,
+         "user_id": "1470042403",
+         "user_email": "diman@mail.ru",
+         "event_id": 1765610842,
+         "event_name": "test123",
+         "timestamp": 1765620121,
+         "status": "approved",
+         "event_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\1470042403_1765620120_event.jpg",
+         "event_photo_id": "AgACAgIAAxkBAAIIA2k9Mhyz9EwIsZvQ4HoWhyg-UvDuAAJUDGsbtt7wSYn9jnjIYVkzAQADAgADeAADNgQ"
+      },
+      {
+         "id": 1765620132,
+         "user_id": "1470042403",
+         "user_email": "diman@mail.ru",
+         "event_id": 1765617025,
+         "event_name": "noname",
+         "timestamp": 1765620132,
+         "status": "approved",
+         "event_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\1470042403_1765620132_event.jpg",
+         "event_photo_id": "AgACAgIAAxkBAAIIxGk9OaPNRrmTbXiytHNAXHB83hWRAAKMDGsbtt7wSYdBpjsonuZiAQADAgADeQADNgQ"
       }
    ]
 }

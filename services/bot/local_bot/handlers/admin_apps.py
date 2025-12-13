@@ -162,63 +162,90 @@ async def cb_process_application(callback: types.CallbackQuery):
 
     f = fsm(uid)
 
+    # ------------------------------------------------------------
+    # ПРИНЯТИЕ ЗАЯВКИ
+    # ------------------------------------------------------------
     if action == "app_accept":
         app["status"] = "approved"
 
+        # Загружаем мероприятие
         events_raw = load_events()
         events = events_raw.get("events", [])
         ev = next((e for e in events if e.get("template_id") == app["event_id"]), None)
 
+        points = 0
         if ev:
             is_prof = ev.get("is_profile", False)
             base = 2
             mult = 1.5 if is_prof else 0.5
             points = int(base * mult)
 
-            email = app.get("user_email")
-            student_key = next(
-                (k for k, v in tokens.items() if v.get("email") == email), None
-            )
+        # ------------------------------------------------------------
+        # НАЧИСЛЕНИЕ БАЛЛОВ СТУДЕНТУ (ИСПРАВЛЕНО)
+        # ------------------------------------------------------------
 
-            if student_key:
-                tokens[student_key]["practice_points"] = (
-                    tokens[student_key].get("practice_points", 0) + points
-                )
-            else:
-                tokens[email] = {
-                    "email": email,
-                    "token": None,
-                    "role": "student",
-                    "practice_points": points,
-                }
+        # 1) Получаем email студента
+        email = app.get("user_email")
 
-            save_tokens()
+        # 2) Ищем Telegram ID студента по email
+        student_uid = None
+        for uid_key, info in tokens.items():
+            if info.get("email") == email:
+                student_uid = uid_key
+                break
 
+        # 3) Если студент не найден — создаём запись
+        if not student_uid:
+            student_uid = str(app.get("user_id"))  # fallback
+            tokens[student_uid] = {
+                "email": email,
+                "token": None,
+                "role": "student",
+                "practice_points": 0,
+            }
+
+        # 4) Начисляем баллы студенту
+        tokens[student_uid]["practice_points"] = (
+            tokens[student_uid].get("practice_points", 0) + points
+        )
+
+        save_tokens()
+
+        # Уведомляем студента
         try:
+            points_text = f"\n⭐️ +{points} баллов" if points > 0 else ""
             await callback.bot.send_message(
-                app["user_id"],
-                f"✅ Ваша заявка на мероприятие «{app['event_name']}» одобрена!",
+                int(student_uid),
+                f"✅ Ваша заявка на «{app['event_name']}» одобрена!{points_text}",
             )
         except:
             pass
 
         log_text = (
-            f"✅ Заявка одобрена:\n{app['event_name']}\n👤 {app.get('user_email')}"
+            f"✅ Заявка одобрена:\n"
+            f"{app['event_name']}\n"
+            f"👤 {email}\n"
+            f"⭐️ +{points} баллов"
         )
 
+    # ------------------------------------------------------------
+    # ОТКЛОНЕНИЕ ЗАЯВКИ
+    # ------------------------------------------------------------
     else:
         app["status"] = "rejected"
 
         try:
             await callback.bot.send_message(
                 app["user_id"],
-                f"❌ Ваша заявка на мероприятие «{app['event_name']}» отклонена.",
+                f"❌ Ваша заявка на «{app['event_name']}» отклонена.",
             )
         except:
             pass
 
         log_text = (
-            f"❌ Заявка отклонена:\n{app['event_name']}\n👤 {app.get('user_email')}"
+            f"❌ Заявка отклонена:\n"
+            f"{app['event_name']}\n"
+            f"👤 {app.get('user_email')}"
         )
 
     save_applications(apps)
