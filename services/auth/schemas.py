@@ -2,9 +2,9 @@
 Схемы данных для Auth сервиса.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
 from enum import Enum
+
+from pydantic import BaseModel, Field
 
 
 class UserRole(str, Enum):
@@ -14,14 +14,17 @@ class UserRole(str, Enum):
 
 # ========== AUTH SCHEMAS ==========
 
+
 class LoginRequest(BaseModel):
     """Запрос на авторизацию"""
+
     user_id: int = Field(..., description="ID пользователя из userStatistic")
     password: str = Field(..., min_length=1, description="Пароль")
 
 
 class AuthCreate(BaseModel):
     """Создание записи аутентификации"""
+
     user_id: int = Field(..., description="ID пользователя из userStatistic")
     password: str = Field(..., min_length=6, description="Пароль (минимум 6 символов)")
     role: UserRole = Field(UserRole.USER, description="Роль пользователя")
@@ -29,12 +32,14 @@ class AuthCreate(BaseModel):
 
 class AuthUpdate(BaseModel):
     """Обновление записи аутентификации"""
-    password: Optional[str] = Field(None, min_length=6, description="Новый пароль")
-    role: Optional[UserRole] = Field(None, description="Новая роль")
+
+    password: str | None = Field(None, min_length=6, description="Новый пароль")
+    role: UserRole | None = Field(None, description="Новая роль")
 
 
 class AuthResponse(BaseModel):
     """Ответ с информацией об аутентификации"""
+
     user_id: int
     role: str
     created_at: str
@@ -46,8 +51,10 @@ class AuthResponse(BaseModel):
 
 # ========== TOKEN SCHEMAS ==========
 
+
 class Token(BaseModel):
     """JWT токены"""
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -56,6 +63,7 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     """Содержимое JWT токена"""
+
     user_id: int
     role: str
     exp: int
@@ -68,10 +76,12 @@ class TokenPayload(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     """Запрос обновления токена"""
+
     refresh_token: str = Field(..., description="Refresh токен")
 
 
 class ChangePasswordRequest(BaseModel):
     """Запрос смены пароля пользователем"""
+
     current_password: str = Field(..., min_length=1, description="Текущий пароль")
     new_password: str = Field(..., min_length=6, description="Новый пароль (минимум 6 символов)")
