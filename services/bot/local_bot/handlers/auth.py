@@ -18,7 +18,13 @@ async def start(message: types.Message):
     chat_id = message.chat.id
     f = fsm(uid)
 
-    # Удаляем prompts
+    # Удаляем команду /start
+    try:
+        await message.delete()
+    except:
+        pass
+
+    # Очищаем промежуточные сообщения
     await f.clear_prompts(message.bot, chat_id)
 
     # Удаляем старое меню
@@ -30,40 +36,18 @@ async def start(message: types.Message):
         except:
             pass
 
-    # Удаляем inline-кнопки у последнего сообщения
-    try:
-        await message.bot.edit_message_reply_markup(chat_id, chat_id, reply_markup=None)
-    except:
-        pass
-
     # Полный сброс FSM
     f.clear()
 
-    # Определяем роль
+    # Определяем роль и показываем единое меню
     role = tokens.get(uid, {}).get("role")
+    token = tokens.get(uid, {}).get("token")
 
-    # ЕДИНОЕ МЕНЮ ДЛЯ ВСЕХ
-    if role == "admin":
+    if role == "admin" and token:
+        await f.show_menu(message.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
+    elif role == "student" and token:
+        await f.show_menu(message.bot, chat_id, "🎓 Меню студента", build_user_menu())
+    else:
         await f.show_menu(
-            message.bot,
-            chat_id,
-            "👑 Админ‑панель",
-            build_admin_menu(),
+            message.bot, chat_id, "👋 Привет! Войдите в систему:", login_kb()
         )
-        return
-
-    if role == "student":
-        await f.show_menu(
-            message.bot,
-            chat_id,
-            "🎓 Меню студента",
-            build_user_menu(),
-        )
-        return
-
-    await f.show_menu(
-        message.bot,
-        chat_id,
-        "👋 Привет! Войдите в систему:",
-        login_kb(),
-    )

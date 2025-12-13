@@ -76,18 +76,14 @@ def safe_log_error(context: str, exc: Exception) -> None:
 async def delete_message_safe(chat_id, message_id, bot=None):
     """
     Безопасное удаление сообщения.
-    Можно передавать bot либо использовать message.bot.
     """
+    if not bot:
+        return
     try:
-        if bot:
-            await bot.delete_message(chat_id, message_id)
-        else:
-            # если bot не передан — ничего не делаем
-            return
+        await bot.delete_message(chat_id, message_id)
     except Exception:
         await asyncio.sleep(0.1)
         try:
-            if bot:
-                await bot.delete_message(chat_id, message_id)
+            await bot.delete_message(chat_id, message_id)
         except Exception:
             pass

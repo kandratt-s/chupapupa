@@ -64,6 +64,10 @@ class FSM:
     async def final(self, bot: Bot, chat_id: int, text: str):
         await bot.send_message(chat_id, text)
 
+    async def log(self, bot: Bot, chat_id: int, text: str):
+        """Отправляет лог-сообщение без кнопок (остаётся в чате)."""
+        await bot.send_message(chat_id, text)
+
 
 def fsm(uid: str) -> FSM:
     return FSM(uid)

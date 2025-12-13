@@ -264,12 +264,15 @@ async def receive_event_photo(message: types.Message):
 
     f.clear()
 
-    await f.show_menu(
+    # ЛОГ
+    await f.log(
         message.bot,
         chat_id,
-        f"✅ Вы успешно отметились на мероприятии:\n{event_name}",
-        build_user_menu(),
+        f"✅ Вы отметились на мероприятии:\n{event_name}\n⏳ Заявка на рассмотрении",
     )
+
+    # МЕНЮ
+    await f.show_menu(message.bot, chat_id, "🎓 Меню студента", build_user_menu())
 
 
 # ================================================================

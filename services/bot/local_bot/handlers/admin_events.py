@@ -57,8 +57,14 @@ async def cb_create_event(callback: types.CallbackQuery):
     f.clear()
     f.set(state="event_name")
 
-    msg = await callback.message.answer(
-        "📝 Введите название мероприятия:", reply_markup=cancel_kb()
+    # Удаляем старое меню (текущее сообщение с кнопками)
+    try:
+        await callback.message.delete()
+    except:
+        pass
+
+    msg = await callback.bot.send_message(
+        chat_id, "📝 Введите название мероприятия:", reply_markup=cancel_kb()
     )
     f.add_prompt(msg.message_id)
 
@@ -67,7 +73,7 @@ async def cb_create_event(callback: types.CallbackQuery):
 
 # ---------------- NAME ----------------
 @admin_events_router.message(
-    NotCommand(), lambda m: fsm(str(m.from_user.id)).get().get("state") == "event_name"
+    lambda m: fsm(str(m.from_user.id)).get().get("state") == "event_name"
 )
 async def event_name(message: types.Message):
     uid = str(message.from_user.id)
@@ -79,6 +85,10 @@ async def event_name(message: types.Message):
     if st.get("state") != "event_name":
         return
 
+    # Игнорируем команды
+    if message.text and message.text.startswith("/"):
+        return
+
     try:
         await message.delete()
     except:
@@ -88,7 +98,7 @@ async def event_name(message: types.Message):
     if not name:
         err = await message.answer("❌ Название не может быть пустым")
         await asyncio.sleep(1.2)
-        await delete_message_safe(chat_id, err.message_id)
+        await delete_message_safe(chat_id, err.message_id, message.bot)
         return
 
     f.set(name=name, state="event_description")
@@ -100,8 +110,7 @@ async def event_name(message: types.Message):
 
 # ---------------- DESCRIPTION ----------------
 @admin_events_router.message(
-    NotCommand(),
-    lambda m: fsm(str(m.from_user.id)).get().get("state") == "event_description",
+    lambda m: fsm(str(m.from_user.id)).get().get("state") == "event_description"
 )
 async def event_description(message: types.Message):
     uid = str(message.from_user.id)
@@ -111,6 +120,10 @@ async def event_description(message: types.Message):
     # Защита от ложного вызова
     st = f.get()
     if st.get("state") != "event_description":
+        return
+
+    # Игнорируем команды
+    if message.text and message.text.startswith("/"):
         return
 
     try:
@@ -153,13 +166,20 @@ async def event_profile(callback: types.CallbackQuery):
     chat_id = callback.message.chat.id
     f = fsm(uid)
 
+    # Защита от ложного вызова
+    st = f.get()
+    if st.get("state") != "event_profile":
+        await callback.answer()
+        return
+
     is_prof = callback.data.split(":")[1] == "yes"
     f.set(is_profile=is_prof, state="event_date")
 
+    # Удаляем сообщение с выбором профильности
     await f.clear_prompts(callback.bot, chat_id)
 
-    msg = await callback.message.answer(
-        "📅 Укажите дату (ДД-ММ-ГГГГ):", reply_markup=cancel_kb()
+    msg = await callback.bot.send_message(
+        chat_id, "📅 Укажите дату (ДД-ММ-ГГГГ):", reply_markup=cancel_kb()
     )
     f.add_prompt(msg.message_id)
 
@@ -168,16 +188,18 @@ async def event_profile(callback: types.CallbackQuery):
 
 # ---------------- DATE ----------------
 @admin_events_router.message(
-    NotCommand(), lambda m: fsm(str(m.from_user.id)).get().get("state") == "event_date"
+    lambda m: fsm(str(m.from_user.id)).get().get("state") == "event_date"
 )
 async def event_date(message: types.Message):
     uid = str(message.from_user.id)
     chat_id = message.chat.id
     f = fsm(uid)
 
-    # Защита от ложного вызова
     st = f.get()
     if st.get("state") != "event_date":
+        return
+
+    if message.text and message.text.startswith("/"):
         return
 
     try:
@@ -187,25 +209,27 @@ async def event_date(message: types.Message):
 
     date_text = message.text.strip()
 
-    # Проверяем формат даты
     try:
         dt = time.strptime(date_text, "%d-%m-%Y")
         ts = int(time.mktime(dt))
     except:
         err = await message.answer("❌ Неверный формат. Пример: 31-12-2025")
         await asyncio.sleep(1.2)
-        await delete_message_safe(chat_id, err.message_id)
+        await delete_message_safe(chat_id, err.message_id, message.bot)
         return
 
-    # Сохраняем мероприятие
+    name = st.get("name")
+    description = st.get("description")
+    is_profile = st.get("is_profile")
+
     events_raw = load_events()
     events_raw.setdefault("events", [])
 
     event = {
         "template_id": int(time.time()),
-        "event_name": st["name"],
-        "description": st["description"],
-        "is_profile": st["is_profile"],
+        "event_name": name,
+        "description": description,
+        "is_profile": is_profile,
         "event_date": date_text,
         "event_date_ts": ts,
         "is_template": True,
@@ -217,24 +241,16 @@ async def event_date(message: types.Message):
     events_raw["events"].append(event)
     save_events(events_raw)
 
-    # Удаляем промежуточные сообщения
     await f.clear_prompts(message.bot, chat_id)
-
-    # Сбрасываем FSM
     f.clear()
 
-    # Финальное сообщение
-    await f.final(
-        message.bot, chat_id, f"✅ Мероприятие создано:\n{st['name']}\n📅 {date_text}"
+    # ЛОГ (остаётся в чате)
+    await f.log(
+        message.bot, chat_id, f"✅ Мероприятие создано:\n{name}\n📅 {date_text}"
     )
 
-    # Меню
-    await f.show_menu(
-        message.bot,
-        chat_id,
-        "👑 Админ‑панель",
-        build_admin_menu(),
-    )
+    # МЕНЮ (отдельно)
+    await f.show_menu(message.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
 
 
 # ================================================================
@@ -423,6 +439,7 @@ async def cb_event_card(callback: types.CallbackQuery):
 @admin_events_router.callback_query(lambda c: c.data.startswith("event_finish:"))
 async def cb_event_finish(callback: types.CallbackQuery):
     uid = str(callback.from_user.id)
+    chat_id = callback.message.chat.id
     tid = int(callback.data.split(":")[1])
 
     events_raw = load_events()
@@ -437,13 +454,18 @@ async def cb_event_finish(callback: types.CallbackQuery):
     save_events(events_raw)
 
     f = fsm(uid)
-    await f.show_menu(
-        callback.bot,
-        callback.message.chat.id,
-        f"🛑 Мероприятие завершено:\n{ev['event_name']}",
-        build_admin_menu(),
-    )
 
+    # Удаляем карточку мероприятия
+    try:
+        await callback.message.delete()
+    except:
+        pass
+
+    # ЛОГ
+    await f.log(callback.bot, chat_id, f"🏁 Мероприятие завершено:\n{ev['event_name']}")
+
+    # МЕНЮ
+    await f.show_menu(callback.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
     await callback.answer()
 
 
@@ -492,21 +514,30 @@ async def cb_event_delete(callback: types.CallbackQuery):
 )
 async def cb_event_delete_confirm(callback: types.CallbackQuery):
     uid = str(callback.from_user.id)
+    chat_id = callback.message.chat.id
     tid = int(callback.data.split(":")[1])
 
     events_raw = load_events()
     events = events_raw.get("events", [])
+
+    ev = next((e for e in events if e["template_id"] == tid), None)
+    event_name = ev["event_name"] if ev else "Неизвестно"
 
     new_events = [e for e in events if e["template_id"] != tid]
     events_raw["events"] = new_events
     save_events(events_raw)
 
     f = fsm(uid)
-    await f.show_menu(
-        callback.bot,
-        callback.message.chat.id,
-        "🗑 Мероприятие удалено",
-        build_admin_menu(),
-    )
 
+    # Удаляем подтверждение
+    try:
+        await callback.message.delete()
+    except:
+        pass
+
+    # ЛОГ
+    await f.log(callback.bot, chat_id, f"🗑 Мероприятие удалено:\n{event_name}")
+
+    # МЕНЮ
+    await f.show_menu(callback.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
     await callback.answer()

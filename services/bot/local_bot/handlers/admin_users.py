@@ -286,12 +286,16 @@ async def reg_photo(message: types.Message):
 
     f.clear()
 
-    await f.show_menu(
+    # ЛОГ
+    await f.log(
         message.bot,
         chat_id,
-        f"✅ Пользователь создан:\n{firstname} {lastname}\n📧 {email}\n👤 Роль: Студент",
-        build_admin_menu(),
+        f"✅ Студент создан:\n{firstname} {lastname}\n📧 {email}",
     )
+
+    # МЕНЮ
+    await f.show_menu(message.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
+
 
 
 # ================================================================
@@ -318,11 +322,15 @@ async def create_admin_user(uid: str, message: types.Message):
     }
     save_user_info()
 
+    await f.clear_prompts(message.bot, chat_id)
     f.clear()
 
-    await f.show_menu(
+    # ЛОГ
+    await f.log(
         message.bot,
         chat_id,
-        f"✅ Администратор создан:\n{firstname} {lastname}\n📧 {email}\n👑 Роль: Администратор",
-        build_admin_menu(),
+        f"✅ Администратор создан:\n{firstname} {lastname}\n📧 {email}",
     )
+
+    # МЕНЮ
+    await f.show_menu(message.bot, chat_id, "👑 Админ‑панель", build_admin_menu())

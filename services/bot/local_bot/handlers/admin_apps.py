@@ -16,7 +16,7 @@ from services.bot.local_bot.storage import (
     save_tokens,
 )
 from services.bot.local_bot.fsm import fsm
-from services.bot.local_bot.keyboards import back_to_menu_kb
+from services.bot.local_bot.keyboards import back_to_menu_kb, build_admin_menu
 from services.bot.local_bot.utils import delete_message_safe
 
 admin_apps_router = Router()
@@ -160,9 +160,8 @@ async def cb_process_application(callback: types.CallbackQuery):
         await callback.answer("❌ Заявка не найдена")
         return
 
-    # -----------------------------------------------------------
-    # Принятие заявки
-    # -----------------------------------------------------------
+    f = fsm(uid)
+
     if action == "app_accept":
         app["status"] = "approved"
 
@@ -195,55 +194,53 @@ async def cb_process_application(callback: types.CallbackQuery):
 
             save_tokens()
 
-        # Уведомление студента
         try:
             await callback.bot.send_message(
                 app["user_id"],
-                f"✅ Ваша заявка на мероприятие '{app['event_name']}' одобрена!",
+                f"✅ Ваша заявка на мероприятие «{app['event_name']}» одобрена!",
             )
         except:
             pass
 
-        admin_text = f"✅ Участие подтверждено:\n{app['event_name']}"
+        log_text = (
+            f"✅ Заявка одобрена:\n{app['event_name']}\n👤 {app.get('user_email')}"
+        )
 
-    # -----------------------------------------------------------
-    # Отклонение заявки
-    # -----------------------------------------------------------
     else:
         app["status"] = "rejected"
 
         try:
             await callback.bot.send_message(
                 app["user_id"],
-                f"❌ Ваша заявка на мероприятие '{app['event_name']}' отклонена.",
+                f"❌ Ваша заявка на мероприятие «{app['event_name']}» отклонена.",
             )
         except:
             pass
 
-        admin_text = f"❌ Участие отклонено:\n{app['event_name']}"
+        log_text = (
+            f"❌ Заявка отклонена:\n{app['event_name']}\n👤 {app.get('user_email')}"
+        )
 
     save_applications(apps)
 
     # Удаляем меню действий
-    f = fsm(uid)
     menu_id = f.get().get("menu_id")
     if menu_id:
-        await delete_message_safe(chat_id, menu_id)
+        await delete_message_safe(chat_id, menu_id, callback.bot)
         f.set(menu_id=None)
 
-    # Показываем результат
-    await callback.message.answer(admin_text)
+    # ЛОГ
+    await f.log(callback.bot, chat_id, log_text)
 
-    # Переход к следующей заявке
+    # Проверяем есть ли ещё заявки
     pending = _pending()
     if not pending:
         f.clear()
-        await callback.message.answer(
-            "✅ Все заявки рассмотрены", reply_markup=back_to_menu_kb()
-        )
+        await f.show_menu(callback.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
         await callback.answer()
         return
 
+    # Показываем следующую заявку
     current_index = f.get().get("index", 0)
     f.set(state="review", index=current_index)
 
