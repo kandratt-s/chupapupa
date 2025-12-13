@@ -1,9 +1,36 @@
 """User Statistic service repositories."""
 
+from typing import Any, Generic, TypeVar
+
 from app.models import UserStatistic
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from shared.repository import BaseRepository
+# Простая замена BaseRepository без shared зависимости
+T = TypeVar("T")
+
+
+class BaseRepository(Generic[T]):
+    """Base repository for CRUD operations."""
+
+    def __init__(self, session: AsyncSession, model: type[T]) -> None:
+        self.session = session
+        self.model = model
+
+    async def create(self, **kwargs: Any) -> T:
+        """Create a new record."""
+        instance = self.model(**kwargs)
+        self.session.add(instance)
+        await self.session.flush()
+        return instance
+
+    async def get_by_id(self, id: int) -> T | None:
+        """Get record by ID."""
+        return await self.session.get(self.model, id)
+
+    async def commit(self) -> None:
+        """Commit transaction."""
+        await self.session.commit()
 
 
 class UserStatisticRepository(BaseRepository[UserStatistic]):
