@@ -95,7 +95,12 @@ async def login_email(message: types.Message):
     if st.get("state") != "login_email":
         return
 
+    # Проверяем что это не команда
     if message.text and message.text.startswith("/"):
+        return
+
+    # Проверяем что есть текст
+    if not message.text:
         return
 
     try:
@@ -103,16 +108,22 @@ async def login_email(message: types.Message):
     except:
         pass
 
-    email = message.text.strip().lower()
+    email = message.text.strip()
 
-    # Проверяем существует ли пользователь
-    if email not in user_info:
+    # Проверяем в user_info ИЛИ специальный случай для "admin"
+    is_admin_login = email.lower() == "admin"
+    is_in_user_info = (email in user_info) or (email.lower() in user_info)
+
+    if not is_admin_login and not is_in_user_info:
         err = await message.answer("❌ Пользователь не найден")
         await asyncio.sleep(1.2)
         await delete_message_safe(chat_id, err.message_id, message.bot)
         return
 
-    f.set(login_email=email, state="login_password")
+    # Сохраняем email как есть (или lowercase для admin)
+    save_email = "admin" if is_admin_login else email
+
+    f.set(login_email=save_email, state="login_password")
     await f.clear_prompts(message.bot, chat_id)
 
     msg = await message.answer("🔑 Введите пароль:", reply_markup=cancel_kb())
@@ -143,7 +154,34 @@ async def login_password(message: types.Message):
     password = message.text.strip()
     email = st.get("login_email")
 
-    # Проверяем пароль
+    # Специальный случай для суперадмина "admin"
+    if email == "admin":
+        if password == "admin":
+            # Успешный вход суперадмина
+            token = f"ADMIN_{uid}_{int(time.time())}"
+            tokens[uid] = {
+                "email": "admin",
+                "token": token,
+                "role": "admin",
+                "practice_points": 0,
+            }
+            save_tokens()
+
+            await f.clear_prompts(message.bot, chat_id)
+            f.clear()
+
+            await f.log(message.bot, chat_id, "✅ Добро пожаловать, Администратор!")
+            await f.show_menu(
+                message.bot, chat_id, "👑 Админ‑панель", build_admin_menu()
+            )
+            return
+        else:
+            err = await message.answer("❌ Неверный пароль")
+            await asyncio.sleep(1.2)
+            await delete_message_safe(chat_id, err.message_id, message.bot)
+            return
+
+    # Обычная проверка для остальных пользователей
     user = user_info.get(email, {})
     stored_hash = user.get("password_hash")
 
@@ -157,7 +195,6 @@ async def login_password(message: types.Message):
     role = user.get("role", "student")
     token = f"{role.upper()}_{uid}_{int(time.time())}"
 
-    # Сохраняем токен
     tokens[uid] = {
         "email": email,
         "token": token,
@@ -169,7 +206,6 @@ async def login_password(message: types.Message):
     await f.clear_prompts(message.bot, chat_id)
     f.clear()
 
-    # ЛОГ + МЕНЮ
     first_name = user.get("first_name", "")
     await f.log(message.bot, chat_id, f"✅ Добро пожаловать, {first_name}!")
 
@@ -177,6 +213,7 @@ async def login_password(message: types.Message):
         await f.show_menu(message.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
     else:
         await f.show_menu(message.bot, chat_id, "🎓 Меню студента", build_user_menu())
+
 
 # ================================================================
 # ПРОФИЛЬ
