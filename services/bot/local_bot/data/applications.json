@@ -32,6 +32,17 @@
          "status": "approved",
          "event_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\1470042403_1765574485_event.jpg",
          "event_photo_id": "AgACAgIAAxkBAAIGXGk8fjMnH5ahnLS-RXgtLCOP0lpMAAIfDmsbtt7oSRBIEtQfHCPoAQADAgADeAADNgQ"
+      },
+      {
+         "id": 1765618205,
+         "user_id": "1470042403",
+         "user_email": "test123@mail.ru",
+         "event_id": 1765613507,
+         "event_name": "none",
+         "timestamp": 1765618205,
+         "status": "pending",
+         "event_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\1470042403_1765618205_event.jpg",
+         "event_photo_id": "AgACAgIAAxkBAAIIA2k9Mhyz9EwIsZvQ4HoWhyg-UvDuAAJUDGsbtt7wSYn9jnjIYVkzAQADAgADeAADNgQ"
       }
    ]
 }

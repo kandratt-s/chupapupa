@@ -1,5 +1,8 @@
 {
    "1470042403": {
-      "menu_id": 2041
+      "state": "login_email",
+      "prompts": [
+         2057
+      ]
    }
 }
