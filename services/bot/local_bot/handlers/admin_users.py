@@ -308,7 +308,7 @@ async def create_user_final(admin_uid: str, message: types.Message, with_photo: 
     photo_path = st.get("photo_path") if with_photo else None
     photo_id = st.get("photo_id") if with_photo else None
 
-    # Создаём пользователя
+    # Создаём пользователя в user_info
     user_info[email] = {
         "first_name": firstname,
         "last_name": lastname,
@@ -320,18 +320,22 @@ async def create_user_final(admin_uid: str, message: types.Message, with_photo: 
     }
     save_user_info()
 
+    # ВАЖНО:
+    # НЕ создаём запись в tokens здесь!
+    # Она создаётся только при логине, и только по Telegram ID.
+
     await f.clear_prompts(message.bot, chat_id)
     f.clear()
 
     role_text = "👑 Администратор" if role == "admin" else "🎓 Студент"
 
-    # ЛОГ + МЕНЮ
     await f.log(
         message.bot,
         chat_id,
         f"✅ Пользователь создан:\n{firstname} {lastname}\n📧 {email}\n{role_text}",
     )
     await f.show_menu(message.bot, chat_id, "👑 Админ‑панель", build_admin_menu())
+
 
 # ================================================================
 # СПИСОК ПОЛЬЗОВАТЕЛЕЙ

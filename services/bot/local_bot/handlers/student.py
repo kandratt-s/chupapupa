@@ -252,7 +252,7 @@ async def receive_event_photo(message: types.Message):
             "id": int(time.time()),
             "user_id": uid,
             "user_email": email,
-            "event_id": tid,
+            "event_id": int(tid),  # ← ВОТ ЭТО
             "event_name": event_name,
             "timestamp": int(time.time()),
             "status": "pending",
@@ -260,6 +260,7 @@ async def receive_event_photo(message: types.Message):
             "event_photo_id": file_id,
         }
     )
+
     save_applications(apps)
 
     f.clear()

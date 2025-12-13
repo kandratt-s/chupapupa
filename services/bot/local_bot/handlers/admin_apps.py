@@ -142,10 +142,10 @@ async def show_application(message: types.Message, uid: str, index: int):
     lambda c: c.data.startswith(("app_accept:", "app_reject:"))
 )
 async def cb_process_application(callback: types.CallbackQuery):
-    uid = str(callback.from_user.id)
+    admin_uid = str(callback.from_user.id)
     chat_id = callback.message.chat.id
 
-    if not is_admin(uid):
+    if not is_admin(admin_uid):
         await callback.answer("❌ Только администратор")
         return
 
@@ -160,7 +160,7 @@ async def cb_process_application(callback: types.CallbackQuery):
         await callback.answer("❌ Заявка не найдена")
         return
 
-    f = fsm(uid)
+    f = fsm(admin_uid)
 
     # ------------------------------------------------------------
     # ПРИНЯТИЕ ЗАЯВКИ
@@ -184,32 +184,30 @@ async def cb_process_application(callback: types.CallbackQuery):
         # НАЧИСЛЕНИЕ БАЛЛОВ СТУДЕНТУ (ИСПРАВЛЕНО)
         # ------------------------------------------------------------
 
-        # 1) Получаем email студента
+        student_uid = str(app["user_id"])  # ВСЕГДА Telegram ID студента
         email = app.get("user_email")
 
-        # 2) Ищем Telegram ID студента по email
-        student_uid = None
-        for uid_key, info in tokens.items():
-            if info.get("email") == email:
-                student_uid = uid_key
-                break
+        student = tokens.get(student_uid)
 
-        # 3) Если студент не найден — создаём запись
-        if not student_uid:
-            student_uid = str(app.get("user_id"))  # fallback
-            tokens[student_uid] = {
-                "email": email,
-                "token": None,
-                "role": "student",
-                "practice_points": 0,
-            }
+        # Если студент найден, но это не студент — не начисляем
+        if student and student.get("role") != "student":
+            points = 0
 
-        # 4) Начисляем баллы студенту
-        tokens[student_uid]["practice_points"] = (
-            tokens[student_uid].get("practice_points", 0) + points
-        )
+        else:
+            # Если студент найден — начисляем
+            if student:
+                student["practice_points"] = student.get("practice_points", 0) + points
 
-        save_tokens()
+            # Если студента нет — создаём корректную запись
+            else:
+                tokens[student_uid] = {
+                    "email": email,
+                    "token": None,
+                    "role": "student",
+                    "practice_points": points,
+                }
+
+            save_tokens()
 
         # Уведомляем студента
         try:
@@ -271,5 +269,5 @@ async def cb_process_application(callback: types.CallbackQuery):
     current_index = f.get().get("index", 0)
     f.set(state="review", index=current_index)
 
-    await show_application(callback.message, uid, current_index)
+    await show_application(callback.message, admin_uid, current_index)
     await callback.answer()

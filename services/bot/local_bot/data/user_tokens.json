@@ -1,20 +1,3 @@
 {
-   "1470042403": {
-      "email": "diman@mail.ru",
-      "token": "STUDENT_1470042403_1765620173",
-      "role": "student",
-      "practice_points": 0
-   },
-   "test123@mail.ru": {
-      "email": "test123@mail.ru",
-      "token": null,
-      "role": "student",
-      "practice_points": 3
-   },
-   "diman@mail.ru": {
-      "email": "diman@mail.ru",
-      "token": null,
-      "role": "student",
-      "practice_points": 12
-   }
+   
 }

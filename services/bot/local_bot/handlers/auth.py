@@ -157,7 +157,6 @@ async def login_password(message: types.Message):
     # Специальный случай для суперадмина "admin"
     if email == "admin":
         if password == "admin":
-            # Успешный вход суперадмина
             token = f"ADMIN_{uid}_{int(time.time())}"
             tokens[uid] = {
                 "email": "admin",
@@ -181,7 +180,7 @@ async def login_password(message: types.Message):
             await delete_message_safe(chat_id, err.message_id, message.bot)
             return
 
-    # Обычная проверка для остальных пользователей
+    # Обычная проверка
     user = user_info.get(email, {})
     stored_hash = user.get("password_hash")
 
@@ -191,17 +190,32 @@ async def login_password(message: types.Message):
         await delete_message_safe(chat_id, err.message_id, message.bot)
         return
 
-    # Успешная авторизация
+    # -------------------------------
+    # ПРАВИЛЬНАЯ РЕГИСТРАЦИЯ В TOKENS
+    # -------------------------------
+
     role = user.get("role", "student")
     token = f"{role.upper()}_{uid}_{int(time.time())}"
 
+    # 1) переносим practice_points из старой записи (если была)
+    old_record = tokens.get(email, {})
+    old_points = old_record.get("practice_points", 0)
+
+    # 2) создаём правильную запись по Telegram ID
     tokens[uid] = {
         "email": email,
         "token": token,
         "role": role,
-        "practice_points": tokens.get(uid, {}).get("practice_points", 0),
+        "practice_points": old_points,
     }
+
+    # 3) удаляем старую запись по email
+    if email in tokens:
+        del tokens[email]
+
     save_tokens()
+
+    # -------------------------------
 
     await f.clear_prompts(message.bot, chat_id)
     f.clear()
