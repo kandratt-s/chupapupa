@@ -1,0 +1,38 @@
+[
+   {
+      "id": 1,
+      "user_id": 1,
+      "event_id": 1,
+      "event_name": "Test1",
+      "status": "rejected",
+      "created_at": "2025-12-13T14:56:44.610283",
+      "photo_path": null
+   },
+   {
+      "id": 2,
+      "user_id": 1,
+      "event_id": 1,
+      "event_name": "Test1",
+      "status": "approved",
+      "created_at": "2025-12-13T14:59:48.215322",
+      "photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\services\\web\\data\\photos\\user_1_event_1_1765627188.jpg"
+   },
+   {
+      "id": 3,
+      "user_id": 1,
+      "event_id": 1,
+      "event_name": "Test1",
+      "status": "approved",
+      "created_at": "2025-12-13T15:01:19.020647",
+      "photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\services\\web\\data\\photos\\user_1_event_1_1765627279.jpg"
+   },
+   {
+      "id": 4,
+      "user_id": 1,
+      "event_id": 2,
+      "event_name": "Test1",
+      "photo_path": "services/web/data/photos\\user_1_event_2_1765631668.jpg",
+      "status": "pending",
+      "created_at": "2025-12-13 16:14:28"
+   }
+]
