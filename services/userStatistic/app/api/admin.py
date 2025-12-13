@@ -5,20 +5,21 @@
 Эти эндпоинты вызываются через admin сервис и предназначены только для администраторов.
 """
 
-from typing import Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.database import get_db
 from app.core.crud import user_crud
 from app.core.dependencies import admin_required
+from app.database import get_db
 from app.schemas import (
-    UserResponse,
+    MessageResponse,
+    UserCreate,
     UserListResponse,
     UserListWithPagination,
-    UserCreate,
+    UserResponse,
     UserUpdate,
-    MessageResponse,
 )
 
 router: APIRouter = APIRouter(prefix="/admin", tags=["admin"])
@@ -42,17 +43,13 @@ router: APIRouter = APIRouter(prefix="/admin", tags=["admin"])
     - Поиска конкретных пользователей
     - Управления пользователями
     """,
-)  # type: ignore[misc]
+)
 async def get_all_users(
     page: int = Query(1, ge=1, description="Номер страницы"),
-    per_page: int = Query(
-        50, ge=1, le=200, description="Количество записей на странице"
-    ),
-    search: Optional[str] = Query(None, description="Поиск по ФИО или Telegram"),
-    active_only: bool = Query(
-        False, description="Показать только активных пользователей"
-    ),
-    current_user: Dict[str, Any] = Depends(admin_required),
+    per_page: int = Query(50, ge=1, le=200, description="Количество записей на странице"),
+    search: str | None = Query(None, description="Поиск по ФИО или Telegram"),
+    active_only: bool = Query(False, description="Показать только активных пользователей"),
+    current_user: dict[str, Any] = Depends(admin_required),
     db: Session = Depends(get_db),
 ) -> UserListWithPagination:
     """
@@ -99,10 +96,10 @@ async def get_all_users(
     - Статус администратора
     - Метаданные (даты создания/обновления)
     """,
-)  # type: ignore[misc]
+)
 async def get_user_by_id(
     user_id: int,
-    current_user: Dict[str, Any] = Depends(admin_required),
+    current_user: dict[str, Any] = Depends(admin_required),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """
@@ -148,10 +145,10 @@ async def get_user_by_id(
     - Начальное количество баллов (0)
     - Статус активности (активен)
     """,
-)  # type: ignore[misc]
+)
 async def create_user(
     user_data: UserCreate,
-    admin: Dict[str, Any] = Depends(admin_required),
+    admin: dict[str, Any] = Depends(admin_required),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """
@@ -172,7 +169,7 @@ async def create_user(
         user = user_crud.create_user(db, user_data)
         return UserResponse.from_orm(user)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 @router.put(
@@ -192,11 +189,11 @@ async def create_user(
     Можно обновлять как отдельные поля, так и несколько сразу.
     Автоматически проверяет уникальность Telegram данных.
     """,
-)  # type: ignore[misc]
+)
 async def update_user_admin(
     user_id: int,
     user_update: UserUpdate,
-    current_user: Dict[str, Any] = Depends(admin_required),
+    current_user: dict[str, Any] = Depends(admin_required),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """
@@ -226,7 +223,7 @@ async def update_user_admin(
         return UserResponse.from_orm(user)
 
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 @router.delete(
@@ -244,10 +241,10 @@ async def update_user_admin(
     - Не отображается в списках активных пользователей
     - Сохраняются все данные и история
     """,
-)  # type: ignore[misc]
+)
 async def deactivate_user(
     user_id: int,
-    current_user: Dict[str, Any] = Depends(admin_required),
+    current_user: dict[str, Any] = Depends(admin_required),
     db: Session = Depends(get_db),
 ) -> MessageResponse:
     """
@@ -286,13 +283,11 @@ async def deactivate_user(
 
     Баллы не могут стать отрицательными - минимальное значение 0.
     """,
-)  # type: ignore[misc]
+)
 async def update_user_points(
     user_id: int,
-    points_delta: float = Query(
-        ..., description="Изменение баллов (может быть отрицательным)"
-    ),
-    current_user: Dict[str, Any] = Depends(admin_required),
+    points_delta: float = Query(..., description="Изменение баллов (может быть отрицательным)"),
+    current_user: dict[str, Any] = Depends(admin_required),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """
@@ -332,10 +327,10 @@ async def update_user_points(
     - Интеграции с Telegram ботом
     - Связывания аккаунтов
     """,
-)  # type: ignore[misc]
+)
 async def get_user_by_telegram(
     telegram_username: str,
-    current_user: Dict[str, Any] = Depends(admin_required),
+    current_user: dict[str, Any] = Depends(admin_required),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """

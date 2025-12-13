@@ -4,9 +4,8 @@ CRUD (Create, Read, Update, Delete) операции для работы с по
 Обновлено для работы с английскими названиями полей.
 """
 
-from typing import Optional, List, Tuple, Dict, Any
-from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from sqlalchemy.orm import Session
 
 from app.models import User
 from app.schemas import UserCreate, UserUpdate
@@ -19,7 +18,7 @@ class UserCRUD:
     """
 
     @staticmethod
-    def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
+    def get_user_by_id(db: Session, user_id: int) -> User | None:
         """
         Получить пользователя по user_id.
 
@@ -33,7 +32,7 @@ class UserCRUD:
         return db.query(User).filter(User.user_id == user_id).first()
 
     @staticmethod
-    def get_user_by_tg_id(db: Session, tg_id: str) -> Optional[User]:
+    def get_user_by_tg_id(db: Session, tg_id: str) -> User | None:
         """
         Получить пользователя по Telegram ID.
 
@@ -47,7 +46,7 @@ class UserCRUD:
         return db.query(User).filter(User.tg_id == tg_id).first()
 
     @staticmethod
-    def get_user_by_tg_name(db: Session, tg_name: str) -> Optional[User]:
+    def get_user_by_tg_name(db: Session, tg_name: str) -> User | None:
         """
         Получить пользователя по Telegram username.
 
@@ -64,7 +63,7 @@ class UserCRUD:
         return db.query(User).filter(User.tg_name == tg_name).first()
 
     @staticmethod
-    def get_user_by_email(db: Session, email: str) -> Optional[User]:
+    def get_user_by_email(db: Session, email: str) -> User | None:
         """
         Получить пользователя по email.
 
@@ -75,17 +74,17 @@ class UserCRUD:
         Returns:
             User или None, если пользователь не найден
         """
-        return db.query(User).filter(User.hs_email == email).first()
+        return db.query(User).filter(User.hse_email == email).first()
 
     @staticmethod
     def get_users_list(
         db: Session,
         skip: int = 0,
         limit: int = 100,
-        search: Optional[str] = None,
-        group_filter: Optional[str] = None,
+        search: str | None = None,
+        group_filter: str | None = None,
         is_active_only: bool = False,
-    ) -> Tuple[List[User], int]:
+    ) -> tuple[list[User], int]:
         """
         Получить список пользователей с пагинацией и поиском.
 
@@ -98,7 +97,7 @@ class UserCRUD:
             is_active_only: Фильтр только активных пользователей
 
         Returns:
-            Tuple[List[User], int]: Список пользователей и общее количество
+            Tuple[UserList, int]: Список пользователей и общее количество
         """
         query = db.query(User)
 
@@ -116,7 +115,7 @@ class UserCRUD:
                     User.middle_name.ilike(search_pattern),
                     User.group_name.ilike(search_pattern),
                     User.tg_name.ilike(search_pattern),
-                    User.hs_email.ilike(search_pattern),
+                    User.hse_email.ilike(search_pattern),
                 )
             )
 
@@ -124,12 +123,7 @@ class UserCRUD:
         total = query.count()
 
         # Применяем сортировку и пагинацию
-        users = (
-            query.order_by(User.last_name, User.first_name)
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
+        users = query.order_by(User.last_name, User.first_name).offset(skip).limit(limit).all()
 
         return users, total
 
@@ -149,19 +143,15 @@ class UserCRUD:
             ValueError: Если пользователь с такими данными уже существует
         """
         # Проверка уникальности email
-        existing_email = UserCRUD.get_user_by_email(db, user_data.hs_email)
+        existing_email = UserCRUD.get_user_by_email(db, user_data.hse_email)
         if existing_email:
-            raise ValueError(
-                f"Пользователь с email '{user_data.hs_email}' уже существует"
-            )
+            raise ValueError(f"Пользователь с email '{user_data.hse_email}' уже существует")
 
         # Проверка уникальности Telegram ID
         if user_data.tg_id:
             existing_tg_id = UserCRUD.get_user_by_tg_id(db, user_data.tg_id)
             if existing_tg_id:
-                raise ValueError(
-                    f"Пользователь с Telegram ID '{user_data.tg_id}' уже существует"
-                )
+                raise ValueError(f"Пользователь с Telegram ID '{user_data.tg_id}' уже существует")
 
         # Создание пользователя
         db_user = User(
@@ -169,7 +159,7 @@ class UserCRUD:
             first_name=user_data.first_name,
             middle_name=user_data.middle_name,
             group_name=user_data.group_name,
-            hs_email=user_data.hs_email,
+            hse_email=user_data.hse_email,
             tg_id=user_data.tg_id,
             tg_name=user_data.tg_name,
             practice_points=user_data.practice_points,
@@ -183,7 +173,7 @@ class UserCRUD:
         return db_user
 
     @staticmethod
-    def update_user(db: Session, user_id: int, user_data: UserUpdate) -> Optional[User]:
+    def update_user(db: Session, user_id: int, user_data: UserUpdate) -> User | None:
         """
         Обновить данные пользователя.
 
@@ -206,11 +196,11 @@ class UserCRUD:
         update_data = user_data.dict(exclude_unset=True)
 
         # Проверка уникальности email (если меняется)
-        if "hs_email" in update_data and update_data["hs_email"]:
-            existing = UserCRUD.get_user_by_email(db, update_data["hs_email"])
+        if "hse_email" in update_data and update_data["hse_email"]:
+            existing = UserCRUD.get_user_by_email(db, update_data["hse_email"])
             if existing and existing.user_id != user_id:
                 raise ValueError(
-                    f"Пользователь с email '{update_data['hs_email']}' уже существует"
+                    f"Пользователь с email '{update_data['hse_email']}' уже существует"
                 )
 
         # Проверка уникальности Telegram ID (если меняется)
@@ -231,7 +221,7 @@ class UserCRUD:
         return user
 
     @staticmethod
-    def update_user_points(db: Session, user_id: int, points: float) -> Optional[User]:
+    def update_user_points(db: Session, user_id: int, points: float) -> User | None:
         """
         Обновить баллы пользователя.
 
@@ -247,7 +237,7 @@ class UserCRUD:
         if not user:
             return None
 
-        user.practice_points = points  # type: ignore[assignment]
+        user.practice_points = points
         db.commit()
         db.refresh(user)
 
@@ -273,56 +263,6 @@ class UserCRUD:
         db.commit()
 
         return True
-
-    @staticmethod
-    def get_users_by_group(db: Session, group_name: str) -> List[User]:
-        """
-        Получить всех пользователей из конкретной группы.
-
-        Args:
-            db: Сессия базы данных
-            group_name: Название группы
-
-        Returns:
-            List[User]: Список пользователей в группе
-        """
-        return db.query(User).filter(User.group_name == group_name).all()
-
-    @staticmethod
-    def get_group_statistics(db: Session) -> List[Dict[str, Any]]:
-        """
-        Получить статистику по группам.
-
-        Args:
-            db: Сессия базы данных
-
-        Returns:
-            List[Dict[str, Any]]: Статистика по группам
-        """
-        from sqlalchemy import func
-
-        result = (
-            db.query(
-                User.group_name,
-                func.count(User.user_id).label("total_users"),
-                func.avg(User.practice_points).label("avg_points"),
-                func.max(User.practice_points).label("max_points"),
-                func.min(User.practice_points).label("min_points"),
-            )
-            .group_by(User.group_name)
-            .all()
-        )
-
-        return [
-            {
-                "group_name": row.group_name,
-                "total_users": row.total_users,
-                "avg_points": float(row.avg_points) if row.avg_points else 0.0,
-                "max_points": row.max_points,
-                "min_points": row.min_points,
-            }
-            for row in result
-        ]
 
 
 # Создаем экземпляр для использования в других модулях

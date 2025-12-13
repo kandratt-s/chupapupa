@@ -3,13 +3,14 @@
 Обрабатывает запросы от пользователей (получение информации о себе или других пользователях).
 """
 
-from typing import Dict, Any
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.database import get_db
 from app.core.crud import user_crud
-from app.core.dependencies import user_required, optional_user
+from app.core.dependencies import optional_user, user_required
+from app.database import get_db
 from app.schemas import UserResponse
 
 router: APIRouter = APIRouter(prefix="/users", tags=["users"])
@@ -29,9 +30,9 @@ router: APIRouter = APIRouter(prefix="/users", tags=["users"])
 
     Этот эндпоинт предназначен для использования обычными пользователями.
     """,
-)  # type: ignore[misc]
+)
 async def get_my_profile(
-    current_user: Dict[str, Any] = Depends(user_required), db: Session = Depends(get_db)
+    current_user: dict[str, Any] = Depends(user_required), db: Session = Depends(get_db)
 ) -> UserResponse:
     """
     Получить информацию о своем профиле.
@@ -71,10 +72,10 @@ async def get_my_profile(
     - Отображения профиля пользователя
     - Получения актуальной информации о баллах
     """,
-)  # type: ignore[misc]
+)
 async def get_user_profile(
     user_id: int,
-    current_user: Dict[str, Any] = Depends(optional_user),
+    current_user: dict[str, Any] = Depends(optional_user),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """

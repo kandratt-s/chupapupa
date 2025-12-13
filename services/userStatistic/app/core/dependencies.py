@@ -3,19 +3,21 @@
 Поддерживает авторизацию как через веб-интерфейс (JWT), так и через Telegram бот.
 """
 
-from typing import Dict, Optional, Any
-from fastapi import Header, HTTPException, status, Depends
+from typing import Any
+
+from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
-from app.database import get_db
+
 from app.core.crud import user_crud
+from app.database import get_db
 
 
 async def get_current_user(
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_user_role: Optional[str] = Header(None, alias="X-User-Role"),
-    x_telegram_id: Optional[str] = Header(None, alias="X-Telegram-ID"),
-    x_source: Optional[str] = Header(None, alias="X-Source"),  # "web" или "telegram"
-) -> Optional[Dict[str, Any]]:
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_user_role: str | None = Header(None, alias="X-User-Role"),
+    x_telegram_id: str | None = Header(None, alias="X-Telegram-ID"),
+    x_source: str | None = Header(None, alias="X-Source"),  # "web" или "telegram"
+) -> dict[str, Any] | None:
     """
     Получение информации о текущем пользователе из заголовков.
 
@@ -47,142 +49,135 @@ async def get_current_user(
 
 
 async def resolve_user_from_headers(
-    current_user_info: Optional[Dict[str, Any]], db: Session
-) -> Optional[Dict[str, Any]]:
+    current_user_info: dict[str, Any] | None, db: Session
+) -> dict[str, Any] | None:
     """
-    Преобразует информацию из заголовков в полную информацию о пользователе.
+    Дополнительная логика для определения user_id из Telegram ID, если нужно.
 
-    Для Telegram авторизации ищет пользователя в БД по tgID.
-    Для веб-авторизации возвращает данные как есть.
-
-    ВАЖНО: Роль всегда должна приходить от Auth Service через заголовки!
-    """
-    if not current_user_info:
-        return None
-
-    if current_user_info["source"] == "telegram":
-        # Для Telegram ищем пользователя по tgID
-        user = user_crud.get_user_by_tg_id(db, current_user_info["telegram_id"])
-        if user:
-            # ВАЖНО: НЕ определяем роль здесь!
-            # В продакшене роль должна приходить от Auth Service
-            # Для разработки используем роль из заголовков или дефолт
-            role = current_user_info.get("role", "student")  # Fallback для разработки
-
-            return {
-                "user_id": user.user_id,
-                "role": role,
-                "source": "telegram",
-                "telegram_id": current_user_info["telegram_id"],
-                "user_object": user,
-            }
-        return None
-    else:
-        # Для веб возвращаем как есть
-        return current_user_info
-
-
-async def admin_required(
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_user_role: Optional[str] = Header(None, alias="X-User-Role"),
-    x_telegram_id: Optional[str] = Header(None, alias="X-Telegram-ID"),
-    x_source: Optional[str] = Header(None, alias="X-Source"),
-    db: Session = Depends(get_db),
-) -> Dict[str, Any]:
-    """
-    Dependency для проверки прав администратора.
-
-    Поддерживает проверку как для веб-авторизации, так и для Telegram.
+    Args:
+        current_user_info: Информация из заголовков
+        db: Сессия базы данных
 
     Returns:
-        Dict с полной информацией о пользователе
-
-    Raises:
-        HTTPException 401: Если пользователь не авторизован
-        HTTPException 403: Если пользователь не админ
+        Дополненная информация о пользователе
     """
-    # Получаем базовую информацию из заголовков
-    current_user_info = await get_current_user(
-        x_user_id, x_user_role, x_telegram_id, x_source
-    )
-
     if not current_user_info:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
-        )
+        return None
 
-    # Резолвим полную информацию о пользователе
-    user_info = await resolve_user_from_headers(current_user_info, db)
+    # Если это Telegram авторизация, попытаемся найти user_id
+    if current_user_info.get("source") == "telegram" and current_user_info.get("telegram_id"):
+        tg_id = current_user_info["telegram_id"]
+        user = user_crud.get_user_by_tg_id(db, tg_id)
+        if user:
+            current_user_info.update(
+                {
+                    "user_id": user.user_id,
+                    "role": "user",  # По умолчанию обычный пользователь
+                    "user_object": user,
+                }
+            )
 
-    if not user_info:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
-        )
-
-    # Проверяем права админа
-    if user_info["role"] != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
-        )
-
-    return user_info
+    return current_user_info
 
 
 async def user_required(
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_user_role: Optional[str] = Header(None, alias="X-User-Role"),
-    x_telegram_id: Optional[str] = Header(None, alias="X-Telegram-ID"),
-    x_source: Optional[str] = Header(None, alias="X-Source"),
+    current_user_info: dict[str, Any] | None = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
-    Dependency для проверки авторизации пользователя.
+    Зависимость, которая требует авторизованного пользователя.
 
-    Поддерживает авторизацию как через веб, так и через Telegram.
+    Raises:
+        HTTPException 401: Если пользователь не авторизован
 
     Returns:
-        Dict[str, Any]: Полная информация о пользователе
+        Dict с информацией о пользователе
     """
-    # Получаем базовую информацию из заголовков
-    current_user_info = await get_current_user(
-        x_user_id, x_user_role, x_telegram_id, x_source
-    )
-
     if not current_user_info:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Требуется авторизация. Отсутствуют заголовки X-User-ID или X-Telegram-ID.",
         )
 
-    # Резолвим полную информацию о пользователе
-    user_info = await resolve_user_from_headers(current_user_info, db)
-
-    if not user_info:
+    # Дополняем информацию если нужно
+    resolved_user = await resolve_user_from_headers(current_user_info, db)
+    if not resolved_user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Не удалось определить пользователя.",
         )
 
-    return user_info
+    return resolved_user
 
 
 async def optional_user(
-    x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    x_user_role: Optional[str] = Header(None, alias="X-User-Role"),
-    x_telegram_id: Optional[str] = Header(None, alias="X-Telegram-ID"),
-    x_source: Optional[str] = Header(None, alias="X-Source"),
+    current_user_info: dict[str, Any] | None = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """
-    Dependency для опциональной авторизации.
+    Зависимость для опциональной авторизации.
+    Возвращает информацию о пользователе если он авторизован, иначе None.
 
-    Возвращает информацию о пользователе, если он авторизован, или None.
-    Не выбрасывает ошибки авторизации.
+    Returns:
+        Dict с информацией о пользователе или None
     """
-    try:
-        current_user_info = await get_current_user(
-            x_user_id, x_user_role, x_telegram_id, x_source
+    if not current_user_info:
+        return None
+
+    # Дополняем информацию если нужно
+    return await resolve_user_from_headers(current_user_info, db)
+
+
+async def admin_required(
+    current_user: dict[str, Any] = Depends(user_required),
+) -> dict[str, Any]:
+    """
+    Зависимость, которая требует пользователя с правами администратора.
+
+    Args:
+        current_user: Информация о текущем пользователе
+
+    Raises:
+        HTTPException 403: Если у пользователя нет прав администратора
+
+    Returns:
+        Dict с информацией о пользователе
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Требуются права администратора.",
         )
-        if current_user_info:
-            return await resolve_user_from_headers(current_user_info, db)
-        return None
-    except Exception:
-        return None
+
+    return current_user
+
+
+async def telegram_user_required(
+    current_user_info: dict[str, Any] | None = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """
+    Зависимость специально для Telegram бота.
+    Требует авторизации через X-Telegram-ID.
+
+    Raises:
+        HTTPException 401: Если авторизация не через Telegram
+
+    Returns:
+        Dict с информацией о пользователе
+    """
+    if not current_user_info or current_user_info.get("source") != "telegram":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Требуется авторизация через Telegram (X-Telegram-ID).",
+        )
+
+    # Пытаемся найти пользователя по tg_id
+    resolved_user = await resolve_user_from_headers(current_user_info, db)
+    if not resolved_user or not resolved_user.get("user_id"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Пользователь не найден. Необходима регистрация.",
+        )
+
+    return resolved_user
