@@ -37,10 +37,6 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# Подключаем роутеры
-app.include_router(main_api.router, prefix="", tags=["events"])
-app.include_router(admin.router, prefix="", tags=["admin"])
-
 
 # ==================== ОСНОВНЫЕ ЭНДПОИНТЫ ====================
 
@@ -76,20 +72,9 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> HealthResponse:
     )
 
 
-# ==================== ТОЧКА ВХОДА ====================
+# Подключение API роутеров
+app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(main_api.router, tags=["events"])
 
-if __name__ == "__main__":
-    import uvicorn
-
-    # Запуск для разработки
-    # Для продакшена используйте: uvicorn main:app --host 0.0.0.0 --port 8004
-    uvicorn.run(
-        "main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG,
-        log_level="info" if not settings.DEBUG else "debug",
-    )
-
-# Для запуска в контейнере или через uvicorn
+# Примечание: uvicorn.run не нужен, так как приложение запускается через Docker
 # с командой: uvicorn main:app --host 0.0.0.0 --port 8004 --reload
