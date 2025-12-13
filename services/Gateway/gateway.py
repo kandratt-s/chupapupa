@@ -4,10 +4,14 @@ import httpx
 app = FastAPI()
 
 ROUTES = {
-    "auth" : "http://localhost:8001",
-    "users" : "http://localhost:8002",
-    "events" : "http://localhost:8003"
+    "auth": "http://localhost:8001",
+    "api": "http://localhost:8002",
+    "events": "http://localhost:8003",
+    "attendance": "http://localhost:8004",
+    "statistics": "http://localhost:8005",
+    "storage": "http://localhost:8006",
 }
+
 
 @app.api_route("/{service}/{path:path}", methods=["GET", "PUT", "POST", "DELETE"])
 async def gateway(service: str, path: str, request: Request):
