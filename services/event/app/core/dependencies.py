@@ -3,6 +3,7 @@
 Обработка авторизации через заголовки JWT из Gateway.
 """
 
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from fastapi import Depends, Header, HTTPException, status
@@ -68,7 +69,7 @@ async def require_admin(current_user: dict[str, Any] = Depends(get_current_user)
     return current_user
 
 
-async def get_db_session() -> AsyncSession:
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Алиас для get_db для единообразия с другими зависимостями.
     """
