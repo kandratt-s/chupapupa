@@ -1,45 +1,69 @@
-# fsm.py
-"""
-Утилиты для работы с FSM-состояниями пользователей.
-"""
-
 from typing import Any, Dict
 from aiogram import Bot
-
 from services.bot.local_bot.storage import user_states, save_user_states
-from services.bot.local_bot.utils import (
-    clear_user_state as _clear_user_state,
-    safe_log_error,
-)
 
 
-def get_state(uid: str) -> Dict[str, Any]:
-    """Вернуть состояние пользователя или пустой словарь."""
-    return user_states.get(uid, {})
+def _st(uid: str) -> Dict[str, Any]:
+    return user_states.setdefault(uid, {})
 
 
-def set_state(uid: str, state: Dict[str, Any]) -> None:
-    """Сохранить состояние пользователя."""
-    user_states[uid] = state
+def _save():
     save_user_states()
 
 
-def clear_state(uid: str) -> None:
-    """Очистить FSM-память пользователя."""
-    _clear_user_state(user_states, uid)
-    save_user_states()
+class FSM:
+    def __init__(self, uid: str):
+        self.uid = uid
 
+    def get(self):
+        return _st(self.uid)
 
-async def delete_prompts(bot, uid, chat_id):
-    st = user_states.get(uid, {})
-    prompts = st.get("prompts", [])
+    def set(self, **kwargs):
+        st = _st(self.uid)
+        st.update(kwargs)
+        _save()
 
-    for msg_id in prompts:
+    def clear(self):
+        user_states[self.uid] = {}
+        _save()
+
+    def add_prompt(self, msg_id: int):
+        st = _st(self.uid)
+        st.setdefault("prompts", []).append(msg_id)
+        _save()
+
+    async def clear_prompts(self, bot: Bot, chat_id: int):
+        st = _st(self.uid)
+        for mid in st.get("prompts", []):
+            try:
+                await bot.delete_message(chat_id, mid)
+            except:
+                pass
+        st["prompts"] = []
+        _save()
+
+    async def show_menu(self, bot: Bot, chat_id: int, text: str, kb):
+        st = _st(self.uid)
+        old_menu_id = st.get("menu_id")
+
+        if old_menu_id:
+            try:
+                await bot.delete_message(chat_id, old_menu_id)
+            except:
+                pass
+
         try:
-            await bot.delete_message(chat_id, msg_id)
-        except Exception as e:
-            print(f"[WARN] delete_prompts: {e}")
+            await bot.edit_message_reply_markup(chat_id, chat_id, reply_markup=None)
+        except:
+            pass
 
-    st["prompts"] = []
-    user_states[uid] = st
-    save_user_states()
+        msg = await bot.send_message(chat_id, text, reply_markup=kb)
+        st["menu_id"] = msg.message_id
+        _save()
+
+    async def final(self, bot: Bot, chat_id: int, text: str):
+        await bot.send_message(chat_id, text)
+
+
+def fsm(uid: str) -> FSM:
+    return FSM(uid)

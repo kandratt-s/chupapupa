@@ -8,24 +8,6 @@
       "student_photo_path": "photos\\rrr@mail.ru_1765564066_base.jpg",
       "student_photo_id": "AgACAgIAAxkBAAIE3Gk8QNL0GkfPiWp96goZXIgCGLbZAAJWDGsbtt7oSamixlTv0kXxAQADAgADeAADNgQ"
    },
-   "RRR2@mail.ru": {
-      "first_name": "RaR",
-      "last_name": "-",
-      "email": "RRR2@mail.ru",
-      "password_hash": "05f487eb48bd370c260e7b5a1b9c625ed1ba37e968ecd2186d758371403d3e7a",
-      "role": "student",
-      "student_photo_path": "photos\\RRR2@mail.ru_1765564120_base.jpg",
-      "student_photo_id": "AgACAgIAAxkBAAIE2Wk8QIx61_9EHlzeaI8MumHtuW_5AAJSDGsbtt7oSfIU6Bnu8cl9AQADAgADbQADNgQ"
-   },
-   "meow@mail.ru": {
-      "first_name": "Meow",
-      "last_name": "Meow",
-      "email": "meow@mail.ru",
-      "password_hash": "00c9fa98d2340fec5a0bc037de368d03310b94e18cee1534b6d7f2d1d4b9ae22",
-      "role": "student",
-      "student_photo_path": "photos\\meow@mail.ru_1765564170_base.jpg",
-      "student_photo_id": "AgACAgIAAxkBAAIE2Wk8QIx61_9EHlzeaI8MumHtuW_5AAJSDGsbtt7oSfIU6Bnu8cl9AQADAgADbQADNgQ"
-   },
    "admin2@mail.ru": {
       "first_name": "Admin2",
       "last_name": "None",
@@ -34,5 +16,23 @@
       "role": "admin",
       "student_photo_path": null,
       "student_photo_id": null
+   },
+   "test@mail.ru": {
+      "first_name": "Test",
+      "last_name": "Account",
+      "email": "test@mail.ru",
+      "password_hash": "c1bc9890f06a627ef11883093bee270e9bd891958e3607eb32dd8e35140530b3",
+      "role": "student",
+      "student_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\test@mail.ru_1765573845_base.jpg",
+      "student_photo_id": "AgACAgIAAxkBAAIGOmk8fByQYNZCQn9yjPSAj4j1CS_8AAIQDmsbtt7oSZXO897GWeQ0AQADAgADbQADNgQ"
+   },
+   "test2@mail.ru": {
+      "first_name": "Test",
+      "last_name": "2",
+      "email": "test2@mail.ru",
+      "password_hash": "c1bc9890f06a627ef11883093bee270e9bd891958e3607eb32dd8e35140530b3",
+      "role": "student",
+      "student_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\test2@mail.ru_1765574713_base.jpg",
+      "student_photo_id": "AgACAgIAAxkBAAIGOmk8fByQYNZCQn9yjPSAj4j1CS_8AAIQDmsbtt7oSZXO897GWeQ0AQADAgADbQADNgQ"
    }
 }

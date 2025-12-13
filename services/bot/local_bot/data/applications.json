@@ -1,3 +1,37 @@
 {
-   "applications": []
+   "applications": [
+      {
+         "id": 1765574054,
+         "user_id": "1470042403",
+         "user_email": "test@mail.ru",
+         "event_id": 1765572806,
+         "event_name": "mero 1",
+         "timestamp": 1765574054,
+         "status": "approved",
+         "event_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\1470042403_1765574054_event.jpg",
+         "event_photo_id": "AgACAgIAAxkBAAIGOmk8fByQYNZCQn9yjPSAj4j1CS_8AAIQDmsbtt7oSZXO897GWeQ0AQADAgADbQADNgQ"
+      },
+      {
+         "id": 1765574069,
+         "user_id": "1470042403",
+         "user_email": "test@mail.ru",
+         "event_id": 1765572806,
+         "event_name": "mero 1",
+         "timestamp": 1765574069,
+         "status": "rejected",
+         "event_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\1470042403_1765574068_event.jpg",
+         "event_photo_id": "AgACAgIAAxkBAAIGXGk8fjMnH5ahnLS-RXgtLCOP0lpMAAIfDmsbtt7oSRBIEtQfHCPoAQADAgADeAADNgQ"
+      },
+      {
+         "id": 1765574486,
+         "user_id": "1470042403",
+         "user_email": "test@mail.ru",
+         "event_id": 1765572806,
+         "event_name": "mero 1",
+         "timestamp": 1765574486,
+         "status": "approved",
+         "event_photo_path": "C:\\Dima\\Проект питон\\chupapupa\\services\\bot\\local_bot\\photos\\1470042403_1765574485_event.jpg",
+         "event_photo_id": "AgACAgIAAxkBAAIGXGk8fjMnH5ahnLS-RXgtLCOP0lpMAAIfDmsbtt7oSRBIEtQfHCPoAQADAgADeAADNgQ"
+      }
+   ]
 }

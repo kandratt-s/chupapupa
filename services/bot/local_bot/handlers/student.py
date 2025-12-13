@@ -1,10 +1,7 @@
 # handlers/student.py
 """
-Обработчики действий студента:
-- список мероприятий
-- просмотр мероприятия
-- отметка (фото)
-- мои заявки
+Студент: список мероприятий, карточка, отметка, мои заявки.
+Новый стиль: единый FSM, чистые сообщения, исчезающие ошибки.
 """
 
 import time
@@ -21,114 +18,113 @@ from services.bot.local_bot.storage import (
     save_applications,
 )
 
-from services.bot.local_bot.fsm import (
-    get_state,
-    set_state,
-    clear_state,
-)
-
+from services.bot.local_bot.fsm import fsm
 from services.bot.local_bot.keyboards import (
     back_to_menu_kb,
     build_user_menu,
 )
-
 from services.bot.local_bot.utils import (
     ensure_photos_dir,
     delete_message_safe,
 )
-
+from services.bot.local_bot.config import PHOTOS_DIR
 
 student_router = Router()
 
 
+# ================================================================
+# ВСПОМОГАТЕЛЬНЫЕ
+# ================================================================
 def is_authenticated(uid: str) -> bool:
-    """Проверка наличия активного токена."""
     u = tokens.get(uid)
     return bool(u and u.get("token"))
 
 
-# ---------------------------------------------------------------
-# Список мероприятий
-# ---------------------------------------------------------------
+def _sort_events(events):
+    return sorted(events, key=lambda e: e.get("event_date_ts", 0))
+
+
+# ================================================================
+# СПИСОК МЕРОПРИЯТИЙ
+# ================================================================
 @student_router.callback_query(lambda c: c.data == "btn_events")
 async def cb_events(callback: types.CallbackQuery):
-    """Показать студенту список активных мероприятий."""
     uid = str(callback.from_user.id)
+    chat_id = callback.message.chat.id
 
     if not is_authenticated(uid):
-        await callback.message.edit_text(
-            "❌ Сначала авторизуйтесь", reply_markup=back_to_menu_kb()
+        await fsm(uid).show_menu(
+            callback.bot, chat_id, "❌ Сначала авторизуйтесь", back_to_menu_kb()
         )
         await callback.answer()
         return
 
     events_raw = load_events()
-    events = events_raw.get("events", [])
+    events = _sort_events(events_raw.get("events", []))
 
-    active = [
-        ev for ev in events if ev.get("is_template") and ev.get("is_active", True)
-    ]
+    active = [ev for ev in events if ev.get("is_template") and ev.get("is_active")]
 
     if not active:
-        await callback.message.edit_text(
-            "📭 Нет активных мероприятий", reply_markup=back_to_menu_kb()
+        await fsm(uid).show_menu(
+            callback.bot, chat_id, "📭 Нет активных мероприятий", back_to_menu_kb()
         )
         await callback.answer()
         return
 
     rows = []
-    for idx, ev in enumerate(events):
-        if ev.get("is_template") and ev.get("is_active", True):
-            name = ev.get("event_name", "(без названия)")
-            date = ev.get("event_date", "-")
-            rows.append(
-                [
-                    types.InlineKeyboardButton(
-                        text=f"{name} — {date}", callback_data=f"view_event:{idx}"
-                    )
-                ]
-            )
+    for ev in active:
+        name = ev["event_name"]
+        date = ev["event_date"]
+        tid = ev["template_id"]
+        rows.append(
+            [
+                types.InlineKeyboardButton(
+                    text=f"{name} — {date}", callback_data=f"view_event:{tid}"
+                )
+            ]
+        )
 
-    rows.append(
-        [types.InlineKeyboardButton(text="◀️ В меню", callback_data="btn_back_to_menu")]
+    kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            *rows,
+            [
+                types.InlineKeyboardButton(
+                    text="◀️ В меню", callback_data="btn_back_to_menu"
+                )
+            ],
+        ]
     )
 
-    kb = types.InlineKeyboardMarkup(inline_keyboard=rows)
     await callback.message.edit_text("📅 Активные мероприятия:", reply_markup=kb)
     await callback.answer()
 
 
-# ---------------------------------------------------------------
-# Просмотр мероприятия
-# ---------------------------------------------------------------
+# ================================================================
+# КАРТОЧКА МЕРОПРИЯТИЯ
+# ================================================================
 @student_router.callback_query(lambda c: c.data.startswith("view_event:"))
 async def cb_view_event(callback: types.CallbackQuery):
-    """Показать подробности выбранного мероприятия."""
     uid = str(callback.from_user.id)
+    chat_id = callback.message.chat.id
 
     if not is_authenticated(uid):
         await callback.answer("❌ Сначала авторизуйтесь")
         return
 
-    try:
-        idx = int(callback.data.split(":")[1])
-    except ValueError:
-        await callback.answer("❌ Ошибка выбора")
-        return
+    tid = int(callback.data.split(":")[1])
 
     events_raw = load_events()
     events = events_raw.get("events", [])
 
-    if idx < 0 or idx >= len(events):
+    ev = next((e for e in events if e["template_id"] == tid), None)
+    if not ev:
         await callback.answer("❌ Мероприятие не найдено")
         return
 
-    ev = events[idx]
-
-    name = ev.get("event_name", "(без названия)")
-    date = ev.get("event_date", "-")
-    desc = ev.get("description", "Нет описания")
-    is_prof = ev.get("is_profile", False)
+    name = ev["event_name"]
+    date = ev["event_date"]
+    desc = ev["description"]
+    is_prof = ev["is_profile"]
 
     base_points = 2
     multiplier = 1.5 if is_prof else 0.5
@@ -142,88 +138,89 @@ async def cb_view_event(callback: types.CallbackQuery):
         f"⭐ Баллы: {points}"
     )
 
-    buttons = [
-        [
-            types.InlineKeyboardButton(
-                text="✅ Отметиться", callback_data=f"attend_event:{idx}"
-            )
-        ],
-        [types.InlineKeyboardButton(text="◀️ Назад", callback_data="btn_events")],
-    ]
+    kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                types.InlineKeyboardButton(
+                    text="📸 Отметиться", callback_data=f"attend_event:{tid}"
+                )
+            ],
+            [types.InlineKeyboardButton(text="◀️ Назад", callback_data="btn_events")],
+        ]
+    )
 
-    kb = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     await callback.message.edit_text(text, reply_markup=kb)
     await callback.answer()
 
 
-# ---------------------------------------------------------------
-# Начало отметки
-# ---------------------------------------------------------------
+# ================================================================
+# НАЧАЛО ОТМЕТКИ
+# ================================================================
 @student_router.callback_query(lambda c: c.data.startswith("attend_event:"))
 async def cb_attend_event(callback: types.CallbackQuery):
-    """Студент нажал «Отметиться» — ждём фото."""
     uid = str(callback.from_user.id)
+    chat_id = callback.message.chat.id
 
     if not is_authenticated(uid):
         await callback.answer("❌ Сначала авторизуйтесь")
         return
 
-    try:
-        idx = int(callback.data.split(":")[1])
-    except ValueError:
-        await callback.answer("❌ Ошибка выбора")
-        return
+    tid = int(callback.data.split(":")[1])
 
-    set_state(
-        uid,
-        {
-            "state": "waiting_event_photo",
-            "event_index": idx,
-            "ts": time.time(),
-        },
-    )
+    f = fsm(uid)
+    f.clear()
+    f.set(state="waiting_event_photo", event_tid=tid)
 
-    await callback.message.edit_text("📸 Отправьте фото с мероприятия (одно).")
+    msg = await callback.message.edit_text("📸 Отправьте фото с мероприятия (одно).")
+    f.add_prompt(msg.message_id)
+
     await callback.answer()
 
 
-# ---------------------------------------------------------------
-# Приём фото
-# ---------------------------------------------------------------
+# ================================================================
+# ПРИЁМ ФОТО
+# ================================================================
 @student_router.message(
     lambda m: m.photo
-    and get_state(str(m.from_user.id)).get("state") == "waiting_event_photo"
+    and fsm(str(m.from_user.id)).get().get("state") == "waiting_event_photo"
 )
 async def receive_event_photo(message: types.Message):
-    """Обработка фото от студента."""
     uid = str(message.from_user.id)
+    chat_id = message.chat.id
+    f = fsm(uid)
+    st = f.get()
 
     if not is_authenticated(uid):
-        await message.answer("❌ Сначала авторизуйтесь", reply_markup=build_user_menu())
+        await f.show_menu(
+            message.bot, chat_id, "❌ Сначала авторизуйтесь", build_user_menu()
+        )
         return
 
-    st = get_state(uid)
-    idx = st.get("event_index")
+    tid = st.get("event_tid")
+
+    # Удаляем инструкцию
+    await f.clear_prompts(message.bot, chat_id)
 
     events_raw = load_events()
     events = events_raw.get("events", [])
 
-    if idx is None or idx >= len(events):
-        clear_state(uid)
-        await message.answer("❌ Ошибка мероприятия", reply_markup=build_user_menu())
+    ev = next((e for e in events if e["template_id"] == tid), None)
+    if not ev:
+        f.clear()
+        await f.show_menu(
+            message.bot, chat_id, "❌ Ошибка мероприятия", build_user_menu()
+        )
         return
 
-    ev = events[idx]
-    event_name = ev.get("event_name", "")
-    event_id = ev.get("template_id", idx)
+    event_name = ev["event_name"]
 
-    # Сохранение фото
     ensure_photos_dir()
     photo = message.photo[-1]
     file_id = photo.file_id
     filename = f"{uid}_{int(time.time())}_event.jpg"
-    path = os.path.join("photos", filename)
+    path = os.path.join(PHOTOS_DIR, filename)
 
+    # Скачиваем фото
     try:
         file_obj = await message.bot.get_file(file_id)
         url = (
@@ -233,16 +230,18 @@ async def receive_event_photo(message: types.Message):
         async with httpx.AsyncClient() as client:
             resp = await client.get(url)
             resp.raise_for_status()
-            with open(path, "wb") as f:
-                f.write(resp.content)
-    except Exception:
+            with open(path, "wb") as f_out:
+                f_out.write(resp.content)
+    except:
         try:
             await photo.download(destination_file=path)
-        except Exception:
-            await message.answer("❌ Не удалось сохранить фото")
+        except:
+            err = await message.answer("❌ Не удалось сохранить фото")
+            await asyncio.sleep(1.2)
+            await delete_message_safe(chat_id, err.message_id)
             return
 
-    # Создание заявки
+    # Создаём заявку
     apps = load_applications()
     apps.setdefault("applications", [])
 
@@ -253,7 +252,7 @@ async def receive_event_photo(message: types.Message):
             "id": int(time.time()),
             "user_id": uid,
             "user_email": email,
-            "event_id": event_id,
+            "event_id": tid,
             "event_name": event_name,
             "timestamp": int(time.time()),
             "status": "pending",
@@ -263,25 +262,27 @@ async def receive_event_photo(message: types.Message):
     )
     save_applications(apps)
 
-    clear_state(uid)
+    f.clear()
 
-    await message.answer(
+    await f.show_menu(
+        message.bot,
+        chat_id,
         f"✅ Вы успешно отметились на мероприятии:\n{event_name}",
-        reply_markup=build_user_menu(),
+        build_user_menu(),
     )
 
 
-# ---------------------------------------------------------------
-# Мои заявки
-# ---------------------------------------------------------------
+# ================================================================
+# МОИ ЗАЯВКИ
+# ================================================================
 @student_router.callback_query(lambda c: c.data == "btn_my_applications")
 async def cb_my_applications(callback: types.CallbackQuery):
-    """Показать студенту список его заявок."""
     uid = str(callback.from_user.id)
+    chat_id = callback.message.chat.id
 
     if not is_authenticated(uid):
-        await callback.message.edit_text(
-            "❌ Сначала авторизуйтесь", reply_markup=back_to_menu_kb()
+        await fsm(uid).show_menu(
+            callback.bot, chat_id, "❌ Сначала авторизуйтесь", back_to_menu_kb()
         )
         await callback.answer()
         return
@@ -290,8 +291,8 @@ async def cb_my_applications(callback: types.CallbackQuery):
     my_apps = [a for a in apps.get("applications", []) if str(a.get("user_id")) == uid]
 
     if not my_apps:
-        await callback.message.edit_text(
-            "📭 У вас пока нет заявок", reply_markup=back_to_menu_kb()
+        await fsm(uid).show_menu(
+            callback.bot, chat_id, "📭 У вас пока нет заявок", back_to_menu_kb()
         )
         await callback.answer()
         return

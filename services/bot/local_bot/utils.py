@@ -12,7 +12,6 @@ from services.bot.local_bot.config import (
     PHOTOS_DIR,
 )
 
-
 def load(path: str):
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -61,21 +60,6 @@ def get_display_name(
     if tg_user:
         return getattr(tg_user, "first_name", "Пользователь") or "Пользователь"
     return "Пользователь"
-
-
-def clear_user_state(user_states: dict, user_id: str):
-    state = user_states.get(user_id)
-    if state:
-        photo_paths = state.get("photo_paths", [])
-        for photo_path in photo_paths:
-            if photo_path and os.path.exists(photo_path):
-                try:
-                    os.remove(photo_path)
-                except Exception:
-                    pass
-        user_states.pop(user_id, None)
-        save(user_states, USER_STATES_PATH)
-
 
 def hash_password(pwd: str) -> str:
     return hashlib.sha256(pwd.encode()).hexdigest()

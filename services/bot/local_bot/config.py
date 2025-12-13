@@ -1,26 +1,23 @@
-# config.py
+import os
 
 BOT_TOKEN = "8105586935:AAFOSia4-_neziYsd02pkp8pBPfbvXQ6hfk"
 
-# Локальные файлы для bot_local
-DATA_DIR = "services/bot/local_bot/data"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-USER_TOKENS_PATH = f"{DATA_DIR}/user_tokens.json"
-USER_INFO_PATH = f"{DATA_DIR}/user_info.json"
-USER_STATES_PATH = f"{DATA_DIR}/user_states.json"
-APPLICATIONS_PATH = f"{DATA_DIR}/applications.json"
-EVENTS_PATH = f"{DATA_DIR}/events.json"
+DATA_DIR = os.path.join(BASE_DIR, "data")
 
-PHOTOS_DIR = "services/bot/local_bot/photos"
+USER_TOKENS_PATH = os.path.join(DATA_DIR, "user_tokens.json")
+USER_INFO_PATH = os.path.join(DATA_DIR, "user_info.json")
+USER_STATES_PATH = os.path.join(DATA_DIR, "user_states.json")
+APPLICATIONS_PATH = os.path.join(DATA_DIR, "applications.json")
+EVENTS_PATH = os.path.join(DATA_DIR, "events.json")
 
-# API Gateway
+PHOTOS_DIR = os.path.join(BASE_DIR, "photos")
+
 GATEWAY_URL = "http://localhost:8000"
 
-# Сервисы, доступные через gateway
 GATEWAY_SERVICES = {
     "auth": "auth",
     "users": "users",
     "events": "events",
-    # при необходимости можно добавить:
-    # "attendance": "attendance",
 }
