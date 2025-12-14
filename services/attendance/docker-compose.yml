@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  attendance-service:
+    build: .
+    container_name: attendance-service
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://chupapupa:chupapupaZXC@172.17.0.1:5432/chupapupa_pj
+    volumes:
+      - ./photos:/app/photos
+    networks:
+      - chupapupa-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  chupapupa-network:
+    external: true
