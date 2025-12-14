@@ -16,8 +16,8 @@ from services.web.api.local_storage import (
 
 
 def local_register_user(
-    name: str, surname: str, email: str, role: str, password: str
-) -> Dict[str, Any]:
+    name: str, surname: str, email: str,
+    role: str, password: str, photo_path: str = None) -> Dict[str, Any]:
     users = load_users()
     user_id = len(users) + 1
 
@@ -29,6 +29,7 @@ def local_register_user(
         "role": role,
         "password": password,
         "points": 0,
+        "photo_path": photo_path,
     }
 
     users.append(user)
@@ -171,3 +172,36 @@ def local_update_application_status(app_id: int, status: str) -> None:
             a["status"] = status
             break
     save_applications(apps)
+
+
+def local_admin_approve_application(app_id: int):
+    apps = load_applications()
+
+    for app in apps:
+        if app["id"] == app_id:
+            app["status"] = "approved"
+
+            # Начисляем баллы
+            event = local_get_event(app["event_id"])
+            if event:
+                base = 2
+                mult = 1.5 if event.get("is_profile", False) else 0.5
+                points = int(base * mult)
+                local_add_points(app["user_id"], points)
+
+            break
+
+    save_applications(apps)
+    return True
+
+
+def local_admin_reject_application(app_id: int):
+    apps = load_applications()
+
+    for app in apps:
+        if app["id"] == app_id:
+            app["status"] = "rejected"
+            break
+
+    save_applications(apps)
+    return True
