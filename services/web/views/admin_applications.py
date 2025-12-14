@@ -1,4 +1,5 @@
 import streamlit as st
+from datetime import datetime
 from state import get_session
 from services.web.api.local_logic import (
     local_get_all_applications,
@@ -9,6 +10,17 @@ from services.web.api.local_logic import (
 )
 
 
+def parse_datetime(dt_str: str):
+    """Парсинг даты для сортировки."""
+    try:
+        return datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+    except:
+        try:
+            return datetime.fromisoformat(dt_str)
+        except:
+            return datetime.min
+
+
 def render():
     session = get_session()
 
@@ -17,6 +29,7 @@ def render():
         return
 
     st.title("📥 Заявки")
+    st.markdown("---")
 
     # Фильтры
     filter_mode = st.radio(
@@ -35,16 +48,27 @@ def render():
     elif filter_mode == "Отклонённые":
         apps = [a for a in apps if a.get("status") == "rejected"]
 
-    # Сортировка: pending первыми, потом по дате
-    status_order = {"pending": 0, "approved": 1, "rejected": 2}
+    # Сортировка по дате (от новых к старым)
     apps = sorted(
-        apps,
-        key=lambda a: (status_order.get(a.get("status"), 3), a.get("created_at", "")),
-        reverse=False,
+        apps, key=lambda a: parse_datetime(a.get("created_at", "")), reverse=True
     )
 
+    # Статистика
+    total = len(apps)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Всего заявок", total)
+    with col2:
+        pending = len([a for a in apps if a.get("status") == "pending"])
+        st.metric("На рассмотрении", pending)
+    with col3:
+        approved = len([a for a in apps if a.get("status") == "approved"])
+        st.metric("Одобрено", approved)
+
+    st.markdown("---")
+
     if not apps:
-        st.info("Заявок не найдено.")
+        st.info("📭 Заявок не найдено.")
         return
 
     for idx, app in enumerate(apps):
@@ -52,70 +76,66 @@ def render():
         event = local_get_event(app["event_id"])
 
         with st.container(border=True):
-            # Статус в заголовке
+            # Статус
             status = app.get("status", "pending")
             if status == "approved":
                 status_badge = "✅ Одобрена"
-                status_color = "green"
             elif status == "rejected":
                 status_badge = "❌ Отклонена"
-                status_color = "red"
             else:
                 status_badge = "⏳ На рассмотрении"
-                status_color = "orange"
 
-            st.write(f"### Заявка #{app['id']} — :{status_color}[{status_badge}]")
+            st.markdown(f"### Заявка #{app['id']} — {status_badge}")
 
             col1, col2 = st.columns(2)
 
-            # Левая колонка — информация о студенте
             with col1:
-                st.write("#### 👤 Студент")
-
+                st.markdown("#### 👤 Студент")
                 if user:
-                    # Фото профиля
                     photo_path = user.get("photo_path")
                     if photo_path:
                         try:
-                            st.image(photo_path, width=150, caption="Фото профиля")
+                            st.image(photo_path, width=120)
                         except:
-                            st.write("📷 Фото недоступно")
-                    else:
-                        st.write("📷 Нет фото профиля")
+                            st.caption("📷 Фото недоступно")
 
-                    st.write(f"**{user['name']} {user['surname']}**")
-                    st.write(f"📧 {user['email']}")
-                    st.write(f"⭐️ Баллы: {user.get('points', 0)}")
+                    st.markdown(f"**{user['name']} {user['surname']}**")
+                    st.caption(
+                        f"📧 {user['email']} | ⭐️ {user.get('points', 0)} баллов"
+                    )
                 else:
                     st.error("Студент не найден")
 
-            # Правая колонка — информация о мероприятии и фото
             with col2:
-                st.write("#### 📅 Мероприятие")
-
+                st.markdown("#### 📅 Мероприятие")
                 if event:
-                    st.write(f"**{event['name']}**")
-                    st.write(f"📅 Дата: {event['date']}")
-                    profile_text = (
-                        "🎯 Профильное"
-                        if event.get("is_profile")
-                        else "📘 Непрофильное"
+                    st.markdown(f"**{event['name']}**")
+                    st.caption(
+                        f"📅 {event['date']} | {'🎯 Профильное' if event.get('is_profile') else '📘 Непрофильное'}"
                     )
-                    st.write(profile_text)
                 else:
-                    st.write(f"**{app.get('event_name', 'Неизвестно')}**")
-                    st.warning("Мероприятие удалено")
+                    st.warning(f"⚠️ {app.get('event_name', 'Удалено')}")
 
-                # Фото с мероприятия
-                st.write("#### 📸 Фото с мероприятия")
+                st.markdown("#### 📸 Фото с мероприятия")
                 event_photo = app.get("photo_path")
                 if event_photo:
                     try:
-                        st.image(event_photo, width=200, caption="Фото с мероприятия")
+                        st.image(event_photo, width=150)
                     except:
-                        st.write("📷 Фото недоступно")
+                        st.caption("📷 Недоступно")
                 else:
-                    st.write("📷 Фото не прикреплено")
+                    st.caption("📷 Не прикреплено")
 
-            # Дата создания
-            st.write(f"🕐 Создано: {app.get('created_at', 'Неизвестно')}")
+            st.caption(f"🕐 {app.get('created_at', 'Неизвестно')}")
+
+            # Кнопки только для pending
+            if status == "pending":
+                col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
+                with col_btn1:
+                    if st.button("✅ Принять", key=f"appr_{idx}", type="primary"):
+                        local_admin_approve_application(app["id"])
+                        st.rerun()
+                with col_btn2:
+                    if st.button("❌ Отклонить", key=f"rej_{idx}"):
+                        local_admin_reject_application(app["id"])
+                        st.rerun()

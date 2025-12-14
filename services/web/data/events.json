@@ -1,26 +1,34 @@
 [
    {
-      "id": 4,
-      "name": "Test3",
-      "description": "lalala",
-      "date": "2025-12-13",
+      "id": 1,
+      "name": "А1",
+      "description": "",
+      "date": "2025-12-14",
       "is_profile": false,
-      "is_active": false
+      "is_active": true
+   },
+   {
+      "id": 2,
+      "name": "А2",
+      "description": "",
+      "date": "2025-12-14",
+      "is_profile": true,
+      "is_active": true
    },
    {
       "id": 4,
-      "name": "Test4",
-      "description": "nope",
-      "date": "2026-12-10",
-      "is_profile": true,
+      "name": "А3",
+      "description": "",
+      "date": "2025-12-14",
+      "is_profile": false,
       "is_active": true
    },
    {
       "id": 5,
-      "name": "Test5",
-      "description": "none",
-      "date": "2025-12-31",
-      "is_profile": true,
-      "is_active": true
+      "name": "А4",
+      "description": "",
+      "date": "2025-12-14",
+      "is_profile": false,
+      "is_active": false
    }
 ]

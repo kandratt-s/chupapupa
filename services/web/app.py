@@ -16,57 +16,77 @@ if "route" not in session:
 
 def go(route: str):
     session["route"] = route
-    st.rerun()
 
 
 def logout():
     session["user_id"] = None
     session["role"] = None
     session["route"] = "auth"
-    st.rerun()
 
 
 # -----------------------------
 # Меню
 # -----------------------------
-st.sidebar.title("Меню")
+st.sidebar.title("🎓 Practice Service")
+st.sidebar.markdown("---")
 
 if not session["user_id"]:
-    st.sidebar.button("Авторизация", on_click=lambda: go("auth"))
+    if st.sidebar.button("🔐 Авторизация", use_container_width=True):
+        go("auth")
+        st.rerun()
 
 else:
     if session["role"] == "student":
-        st.sidebar.button("📅 Мероприятия", on_click=lambda: go("student_events"))
-        st.sidebar.button("📝 Мои заявки", on_click=lambda: go("student_applications"))
-        st.sidebar.button("👤 Профиль", on_click=lambda: go("student_profile"))
+        st.sidebar.markdown("### 📚 Студент")
+        if st.sidebar.button("📅 Мероприятия", use_container_width=True):
+            go("student_events")
+            st.rerun()
+        if st.sidebar.button("📝 Мои заявки", use_container_width=True):
+            go("student_applications")
+            st.rerun()
+        if st.sidebar.button("👤 Профиль", use_container_width=True):
+            go("student_profile")
+            st.rerun()
 
     elif session["role"] == "admin":
-        st.sidebar.markdown("### Мероприятия")
-        st.sidebar.button(
-            "➕ Создать мероприятие", on_click=lambda: go("admin_events_create")
-        )
-        st.sidebar.button(
-            "📅 Список мероприятий", on_click=lambda: go("admin_events_list")
-        )
+        st.sidebar.markdown("### 📅 Мероприятия")
+        if st.sidebar.button("➕ Создать", use_container_width=True):
+            go("admin_events_create")
+            st.rerun()
+        if st.sidebar.button("📋 Список", use_container_width=True):
+            go("admin_events_list")
+            st.rerun()
 
-        st.sidebar.markdown("### Пользователи")
-        st.sidebar.button(
-            "➕ Создать пользователя", on_click=lambda: go("admin_users_create")
-        )
-        st.sidebar.button(
-            "👥 Список пользователей", on_click=lambda: go("admin_users_list")
-        )
+        st.sidebar.markdown("### 👥 Пользователи")
+        if st.sidebar.button("➕ Создать", use_container_width=True, key="create_user"):
+            go("admin_users_create")
+            st.rerun()
+        if st.sidebar.button("📋 Список", use_container_width=True, key="list_users"):
+            go("admin_users_list")
+            st.rerun()
 
-        st.sidebar.markdown("### Заявки")
-        st.sidebar.button("📥 Заявки", on_click=lambda: go("admin_applications"))
+        st.sidebar.markdown("### 📊 Управление")
+        if st.sidebar.button("📥 Заявки", use_container_width=True):
+            go("admin_applications")
+            st.rerun()
+        if st.sidebar.button("📈 Статистика", use_container_width=True):
+            go("admin_statistics")
+            st.rerun()
 
         st.sidebar.markdown("---")
-        st.sidebar.button("👤 Профиль", on_click=lambda: go("admin_profile"))
+        if st.sidebar.button(
+            "👤 Профиль", use_container_width=True, key="admin_profile"
+        ):
+            go("admin_profile")
+            st.rerun()
 
-    st.sidebar.button("🚪 Выйти", on_click=logout)
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🚪 Выйти", use_container_width=True):
+        logout()
+        st.rerun()
 
 # -----------------------------
-# Маршруты → модули
+# Маршруты
 # -----------------------------
 ROUTES = {
     "auth": "services.web.views.auth",
@@ -79,6 +99,7 @@ ROUTES = {
     "admin_users_create": "services.web.views.admin_users_create",
     "admin_users_list": "services.web.views.admin_users_list",
     "admin_profile": "services.web.views.admin_profile",
+    "admin_statistics": "services.web.views.admin_statistics",
 }
 
 module_name = ROUTES.get(session["route"], "services.web.views.auth")

@@ -17,5 +17,15 @@
       "role": "admin",
       "score": 0,
       "password": "password"
+   },
+   {
+      "id": 3,
+      "name": "Диман",
+      "surname": "Новик",
+      "email": "dima@mail.ru",
+      "role": "student",
+      "password": "1234йцукен!",
+      "points": 4,
+      "photo_path": "services/web/data/photos/profiles\\profile_dima_mail.ru_1765699585.jpg"
    }
 ]
