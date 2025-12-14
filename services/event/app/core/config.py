@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # Сетевые настройки
     HOST: str = "0.0.0.0"
-    PORT: int = 8003
+    PORT: int = 8004
 
     # База данных
     DB_HOST: str = "localhost"

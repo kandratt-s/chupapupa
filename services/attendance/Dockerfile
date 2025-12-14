@@ -18,8 +18,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем код приложения
 COPY . .
 
-# Создаем директории для фото и устанавливаем права
-RUN mkdir -p photos/users photos/attendances && \
+# Создаем локальные директории для фото и устанавливаем права
+# Основные фото будут в shared volume: /shared/photos/attendances/
+RUN mkdir -p photos/attendances photos/attendances/thumbnails photos/temp && \
     chown -R attendanceuser:attendanceuser /app
 
 # Переключаемся на пользователя

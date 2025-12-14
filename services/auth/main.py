@@ -17,6 +17,7 @@ from crud import authenticate_user, create_auth, get_auth_by_user_id, update_aut
 from database import engine, get_db
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from models import Base
+from sqlalchemy import text
 from schemas import (
     AuthCreate,
     AuthResponse,
@@ -214,7 +215,7 @@ def change_password(
 # ========== АДМИНСКИЕ ЭНДПОИНТЫ ==========
 
 
-@app.post("/auth/create", response_model=AuthResponse, tags=["admin"])
+@app.post("/create", response_model=AuthResponse, tags=["admin"])
 def create_auth_record(auth_data: AuthCreate, db: Session = Depends(get_db)) -> AuthResponse:
     """
     Создание записи аутентификации для существующего пользователя.
@@ -235,7 +236,7 @@ def create_auth_record(auth_data: AuthCreate, db: Session = Depends(get_db)) -> 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
-@app.put("/auth/{user_id}", response_model=AuthResponse, tags=["admin"])
+@app.put("/{user_id}", response_model=AuthResponse, tags=["admin"])
 def update_auth_record(
     user_id: int, auth_data: AuthUpdate, db: Session = Depends(get_db)
 ) -> AuthResponse:
@@ -258,7 +259,32 @@ def update_auth_record(
     )
 
 
-@app.get("/auth/{user_id}", response_model=AuthResponse, tags=["admin"])
+@app.get("/health", tags=["health"])
+async def health_check() -> dict[str, Any]:
+    """Проверка здоровья сервиса"""
+    db_status = "disconnected"
+    
+    try:
+        # Простая проверка подключения к БД через SQLAlchemy
+        db = next(get_db())
+        result = db.execute(text("SELECT 1"))
+        if result:
+            db_status = "connected"
+        db.close()
+    except Exception:
+        db_status = "disconnected"
+    
+    return {
+        "service": "auth-service",
+        "status": "healthy" if db_status == "connected" else "unhealthy",
+        "database": db_status,
+        "port": 8001,
+        "version": "1.0.0",
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@app.get("/{user_id}", response_model=AuthResponse, tags=["admin"])
 def get_auth_record(user_id: int, db: Session = Depends(get_db)) -> AuthResponse:
     """
     Получение информации об аутентификации пользователя.
@@ -280,10 +306,25 @@ def get_auth_record(user_id: int, db: Session = Depends(get_db)) -> AuthResponse
 
 
 @app.get("/health", tags=["health"])
-def health_check() -> dict[str, Any]:
-    """Health check эндпоинт для мониторинга"""
+async def health_check() -> dict[str, Any]:
+    """Health check эндпоинт для мониторинга с проверкой БД"""
+    db_status = "disconnected"
+    
+    try:
+        # Простая проверка подключения к БД через SQLAlchemy
+        db = next(get_db())
+        result = db.execute(text("SELECT 1"))
+        if result:
+            db_status = "connected"
+        db.close()
+    except Exception:
+        db_status = "disconnected"
+    
     return {
-        "status": "healthy",
         "service": "auth-service",
+        "status": "healthy" if db_status == "connected" else "unhealthy",
+        "database": db_status,
+        "port": 8001,
+        "version": "1.0.0",
         "timestamp": datetime.utcnow().isoformat(),
     }

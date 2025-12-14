@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from src.api import admin, users
 from src.database import engine
 from src.models.schemas import HealthResponse
+from sqlalchemy import text
 
 # Создание приложения
 app = FastAPI(
@@ -29,12 +30,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Статические файлы для фотографий
-app.mount("/static", StaticFiles(directory="photos"), name="static")
+# Статические файлы для фотографий (новая структура)
+app.mount("/static/attendances", StaticFiles(directory="photos/attendances"), name="attendances")
+app.mount("/static/thumbnails", StaticFiles(directory="photos/attendances/thumbnails"), name="thumbnails")
 
 # Подключение маршрутов
-app.include_router(users.router, tags=["Users"])
-app.include_router(admin.router, tags=["Admin"])
+app.include_router(users.router, prefix="/attendances", tags=["Users"])
+app.include_router(admin.router, prefix="/admin", tags=["Admin"])
 
 
 @app.on_event("startup")
@@ -57,7 +59,7 @@ async def health_check() -> HealthResponse:
     # Проверяем подключение к базе данных
     try:
         async with engine.begin() as conn:
-            await conn.execute("SELECT 1")
+            await conn.execute(text("SELECT 1"))
         database_status = "connected"
     except Exception:
         database_status = "disconnected"

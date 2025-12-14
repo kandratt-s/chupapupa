@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 8001
 
 # Команда запуска
-CMD ["uvicorn", "main_auth:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]

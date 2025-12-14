@@ -24,7 +24,7 @@ photo_service = PhotoService()
 attendance_service = AttendanceService(photo_service)
 
 
-@router.get("/admin/pending", response_model=AttendanceListResponse)
+@router.get("/pending", response_model=AttendanceListResponse)
 async def get_pending_attendances(
     skip: int = Query(0, ge=0, description="Количество пропускаемых записей"),
     limit: int = Query(50, ge=1, le=100, description="Количество записей на странице"),
@@ -48,7 +48,7 @@ async def get_pending_attendances(
     )
 
 
-@router.post("/admin/review/{attendance_id}", response_model=AttendanceResponse)
+@router.post("/review/{attendance_id}", response_model=AttendanceResponse)
 async def submit_review(
     attendance_id: int,
     review_data: AttendanceReview,
@@ -71,7 +71,7 @@ async def submit_review(
         raise HTTPException(status_code=500, detail=f"Ошибка при обработке заявки: {str(e)}") from e
 
 
-@router.get("/admin/pending-count")
+@router.get("/pending-count")
 async def get_pending_count(
     current_user: dict[str, Any] = Depends(require_admin),
     db: AsyncSession = Depends(get_db),

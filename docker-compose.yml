@@ -1,43 +1,77 @@
 services:
+  # =====================================================
+  # БАЗА ДАННЫХ
+  # =====================================================
   postgres:
     extends:
       file: db/docker-compose.postgres.yml
       service: postgres
     networks:
-      - app-network
+      - internal-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =====================================================
+  # ОБЩЕЕ ХРАНИЛИЩЕ ДЛЯ ФОТОГРАФИЙ
+  # =====================================================
+  photos-volume:
+    image: alpine:latest
+    volumes:
+      - photos_data:/shared/photos
+    command: |
+      sh -c "
+        mkdir -p /shared/photos/faces /shared/photos/attendances &&
+        echo '✅ Структура папок создана:' &&
+        echo '  - /shared/photos/faces/ - фотографии пользователей' &&
+        echo '  - /shared/photos/attendances/ - файлы посещений' &&
+        tail -f /dev/null
+      "
+    networks:
+      - internal-network
+    restart: unless-stopped
+
+  # =====================================================
+  # ВНУТРЕННИЕ МИКРОСЕРВИСЫ (без внешнего доступа)
+  # =====================================================
 
   auth-service:
     build:
-      context: . # чтобы иметь возможность загружать файлы за докерфайлом (requirements-base.txt)
-      dockerfile: ./services/auth/Dockerfile
-    env_file:
-      - ./services/auth/.env  # Загружаем переменные из .env файла сервиса
+      context: ./services/auth
+      dockerfile: Dockerfile
     environment:
       - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://auth_user:auth_pass@postgres:5432/chupapupa_pj
+      - PHOTOS_PATH=/shared/photos
     depends_on:
-      # Ожидаем готовности Postgres перед запуском сервиса
       postgres:
         condition: service_healthy
-    ports:
-      - "8001:8000"
+      photos-volume:
+        condition: service_started
+    volumes:
+      - photos_data:/shared/photos
     networks:
-      - app-network
+      - internal-network
+    restart: unless-stopped
 
-  admin-service:
+  event-service:
     build:
-      context: .
-      dockerfile: ./services/admin/Dockerfile
-    env_file:
-      - ./services/admin/.env
+      context: ./services/event
+      dockerfile: Dockerfile
     environment:
       - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://event_user:event_pass@postgres:5432/chupapupa_pj
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      - "8002:8000"
     networks:
-      - app-network
+      - internal-network
+    restart: unless-stopped
 
   attendance-service:
     build:
@@ -46,109 +80,90 @@ services:
     environment:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql+asyncpg://chupapupa:chupapupaZXC@postgres:5432/chupapupa_pj
+      - PHOTOS_PATH=/shared/photos/attendances
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      - "8003:8003"
+      photos-volume:
+        condition: service_started
     volumes:
-      - ./services/attendance:/app
+      - photos_data:/shared/photos
     networks:
-      - app-network
+      - internal-network
+    restart: unless-stopped
 
-  bot-service:
+  user-statistic-service:
     build:
-      context: .
-      dockerfile: ./services/bot/Dockerfile
-    env_file:
-      - ./services/bot/.env
+      context: ./services/userStatistic
+      dockerfile: Dockerfile
     environment:
       - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://user_statistic_user:user_statistic_pass@postgres:5432/chupapupa_pj
+      - PHOTOS_PATH=/shared/photos/faces
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      - "8004:8000"
+      photos-volume:
+        condition: service_started
     volumes:
-      - ./services/bot:/app
+      - photos_data:/shared/photos
     networks:
-      - app-network
+      - internal-network
+    restart: unless-stopped
 
-#  cv-service:
-#    build:
-#      context: .
-#      dockerfile: ./services/CV/Dockerfile
-#    env_file:
-#      - ./services/CV/.env
-#    environment:
-#      - PYTHONPATH=/app
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#    ports:
-#      - "8005:8000"
-#    volumes:
-#      - ./services/CV:/app
-#    networks:
-#      - app-network
+  # =====================================================
+  # ПУБЛИЧНЫЙ GATEWAY (единственный внешний API доступ)
+  # =====================================================
 
-  event-service:
+  api-gateway:
     build:
-      context: .
-      dockerfile: ./services/event/Dockerfile
-    env_file:
-      - ./services/event/.env
+      context: ./services/Gateway
+      dockerfile: Dockerfile
     environment:
       - PYTHONPATH=/app
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      # URLs внутренних сервисов
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - EVENT_SERVICE_URL=http://event-service:8004
+      - ATTENDANCE_SERVICE_URL=http://attendance-service:8003
+      - USER_STATISTIC_SERVICE_URL=http://user-statistic-service:8006
+      # Безопасность
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-this-in-production}
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8000
     depends_on:
-      postgres:
-        condition: service_healthy
+      auth-service:
+        condition: service_started
+      event-service:
+        condition: service_started
+      attendance-service:
+        condition: service_started
+      user-statistic-service:
+        condition: service_started
     ports:
-      - "8006:8000"
-    volumes:
-      - ./services/event:/app
+      - "8000:8000"  # Единственный внешний API порт
     networks:
-      - app-network
+      - internal-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  user_statistic-service:
-    build:
-      context: .
-      dockerfile: ./services/userStatistic/Dockerfile
-    env_file:
-      - ./services/userStatistic/.env
-    environment:
-      - PYTHONPATH=/app
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "8007:8000"
-    volumes:
-      - ./services/userStatistic:/app
-    networks:
-      - app-network
-
-  web-service:
-    build:
-      context: .
-      dockerfile: ./services/web/Dockerfile
-    env_file:
-      - ./services/web/.env
-    environment:
-      - PYTHONPATH=/app
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "8008:8000"
-    volumes:
-      - ./services/web:/app
-    networks:
-      - app-network
+# =====================================================
+# СЕТИ И ТОМА
+# =====================================================
 
 networks:
-  app-network:
+  internal-network:
     driver: bridge
+    # internal: false позволяет Gateway обращаться наружу
+    internal: false
 
 volumes:
   postgres_data:
+    driver: local
+  photos_data:
+    driver: local

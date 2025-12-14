@@ -4,7 +4,6 @@
 """
 
 from pydantic_settings import BaseSettings
-from pydantic import computed_field
 
 
 class Settings(BaseSettings):  # type: ignore[misc]
@@ -19,17 +18,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     PORT: int = 8006
 
     # Настройки базы данных
-    DB_HOST: str = "postgres"
-    DB_PORT: int = 5432
-    DB_NAME: str = "chupapupa_db"
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "password"
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def DATABASE_URL(self) -> str:
-        """Собираем DATABASE_URL из отдельных параметров."""
-        return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+    DATABASE_URL: str = "postgresql://user_statistic_user:user_statistic_pass@postgres:5432/chupapupa_pj"
 
     # Настройки логирования
     LOG_LEVEL: str = "INFO"

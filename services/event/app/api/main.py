@@ -16,7 +16,7 @@ from app.schemas import EventListResponse, EventResponse
 router = APIRouter()
 
 
-@router.get("/events", response_model=EventListResponse, tags=["events"])
+@router.get("/", response_model=EventListResponse, tags=["events"])
 async def get_events(
     skip: int = Query(0, ge=0, description="Количество пропускаемых записей"),
     limit: int = Query(50, ge=1, le=100, description="Количество записей на странице"),
@@ -63,7 +63,7 @@ async def get_events(
     )
 
 
-@router.get("/events/{event_id}", response_model=EventResponse, tags=["events"])
+@router.get("/{event_id}", response_model=EventResponse, tags=["events"])
 async def get_event(
     event_id: int,
     current_user: dict[str, Any] = Depends(get_current_user),
@@ -81,7 +81,7 @@ async def get_event(
     return event
 
 
-@router.get("/events/upcoming", response_model=list[EventResponse], tags=["events"])
+@router.get("/upcoming", response_model=list[EventResponse], tags=["events"])
 async def get_upcoming_events(
     limit: int = Query(10, ge=1, le=50, description="Максимальное количество событий"),
     days_ahead: int = Query(30, ge=1, le=365, description="Количество дней вперед"),

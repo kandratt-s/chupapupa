@@ -2,13 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY ./requirements-base.txt .
-RUN pip install --no-cache-dir -r requirements-base.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ./services/web/requirements.txt ./requirements-local.txt
-RUN pip install --no-cache-dir -r requirements-local.txt
-
-COPY ./services/web .
+COPY . .
 
 RUN adduser --disabled-password --gecos '' appuser \
     && chown -R appuser:appuser /app

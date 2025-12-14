@@ -72,9 +72,9 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> HealthResponse:
     )
 
 
-# Подключение API роутеров
+# Подключение API роутеров  
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
-app.include_router(main_api.router, tags=["events"])
+app.include_router(main_api.router, prefix="/events", tags=["events"])
 
 # Примечание: uvicorn.run не нужен, так как приложение запускается через Docker
 # с командой: uvicorn main:app --host 0.0.0.0 --port 8004 --reload

@@ -4,7 +4,7 @@
 
 from typing import Any
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Enum, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql import func
 
@@ -30,9 +30,9 @@ class AttendanceRecord(Base):
     attendance_id = Column(Integer, primary_key=True)
     event_id = Column(Integer, nullable=False)
     user_id = Column(Integer, nullable=False)
-    file_path = Column(String(500), nullable=True)  # Путь к файлу (фото или PDF)
+    photo_path = Column(String(500), nullable=True)  # Путь к файлу (фото или PDF)
     is_aproved = Column(Boolean, nullable=False, default=False)
-    status = Column(String(20), nullable=False, default=PENDING)
+    status = Column(Enum("pending", "approved", "rejected", "reviewing", name="attendance_status", schema="attendance_service"), nullable=False, default=PENDING)
     reviewed_by = Column(Integer, nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
@@ -44,7 +44,7 @@ class AttendanceRecord(Base):
             "attendance_id": self.attendance_id,
             "event_id": self.event_id,
             "user_id": self.user_id,
-            "file_path": self.file_path,
+            "file_path": self.photo_path,
             "is_aproved": self.is_aproved,
             "status": self.status,
             "reviewed_by": self.reviewed_by,

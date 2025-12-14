@@ -21,7 +21,7 @@ photo_service = PhotoService()
 attendance_service = AttendanceService(photo_service)
 
 
-@router.post("/attendances", response_model=AttendanceResponse)
+@router.post("/", response_model=AttendanceResponse)
 async def create_attendance(
     event_id: int = Form(..., description="ID мероприятия"),
     notes: str = Form(None, description="Дополнительные заметки"),
@@ -42,7 +42,7 @@ async def create_attendance(
     return AttendanceResponse.model_validate(attendance.to_dict())
 
 
-@router.get("/attendances", response_model=AttendanceListResponse)
+@router.get("/", response_model=AttendanceListResponse)
 async def get_my_attendances(
     skip: int = Query(0, ge=0, description="Количество пропускаемых записей"),
     limit: int = Query(50, ge=1, le=100, description="Количество записей на странице"),
@@ -68,7 +68,7 @@ async def get_my_attendances(
     )
 
 
-@router.get("/attendances/{attendance_id}", response_model=AttendanceResponse)
+@router.get("/{attendance_id}", response_model=AttendanceResponse)
 async def get_attendance_by_id(
     attendance_id: int,
     current_user: dict[str, Any] = Depends(get_current_user),

@@ -13,10 +13,10 @@ from app.core.crud import event_crud
 from app.core.dependencies import get_db_session, require_admin
 from app.schemas import EventCreate, EventListResponse, EventResponse, EventUpdate
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(tags=["admin"])
 
 
-@router.post("/events", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
 async def create_event(
     event_data: EventCreate,
     admin_user: dict[str, Any] = Depends(require_admin),
@@ -36,7 +36,7 @@ async def create_event(
         ) from e
 
 
-@router.get("/events", response_model=EventListResponse)
+@router.get("/", response_model=EventListResponse)
 async def get_all_events(
     skip: int = Query(0, ge=0, description="Количество пропускаемых записей"),
     limit: int = Query(50, ge=1, le=100, description="Количество записей на странице"),
@@ -84,7 +84,7 @@ async def get_all_events(
     )
 
 
-@router.put("/events/{event_id}", response_model=EventResponse)
+@router.put("/{event_id}", response_model=EventResponse)
 async def update_event(
     event_id: int,
     event_data: EventUpdate,
@@ -110,7 +110,7 @@ async def update_event(
         ) from e
 
 
-@router.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_event(
     event_id: int,
     hard_delete: bool = Query(False, description="Жестко удалить событие"),
