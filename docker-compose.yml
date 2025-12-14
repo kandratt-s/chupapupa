@@ -1,0 +1,154 @@
+services:
+  postgres:
+    extends:
+      file: db/docker-compose.postgres.yml
+      service: postgres
+    networks:
+      - app-network
+
+  auth-service:
+    build:
+      context: . # чтобы иметь возможность загружать файлы за докерфайлом (requirements-base.txt)
+      dockerfile: ./services/auth/Dockerfile
+    env_file:
+      - ./services/auth/.env  # Загружаем переменные из .env файла сервиса
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      # Ожидаем готовности Postgres перед запуском сервиса
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8001:8000"
+    networks:
+      - app-network
+
+  admin-service:
+    build:
+      context: .
+      dockerfile: ./services/admin/Dockerfile
+    env_file:
+      - ./services/admin/.env
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8002:8000"
+    networks:
+      - app-network
+
+  attendance-service:
+    build:
+      context: ./services/attendance
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql+asyncpg://chupapupa:chupapupaZXC@postgres:5432/chupapupa_pj
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./services/attendance:/app
+    networks:
+      - app-network
+
+  bot-service:
+    build:
+      context: .
+      dockerfile: ./services/bot/Dockerfile
+    env_file:
+      - ./services/bot/.env
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8004:8000"
+    volumes:
+      - ./services/bot:/app
+    networks:
+      - app-network
+
+#  cv-service:
+#    build:
+#      context: .
+#      dockerfile: ./services/CV/Dockerfile
+#    env_file:
+#      - ./services/CV/.env
+#    environment:
+#      - PYTHONPATH=/app
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#    ports:
+#      - "8005:8000"
+#    volumes:
+#      - ./services/CV:/app
+#    networks:
+#      - app-network
+
+  event-service:
+    build:
+      context: .
+      dockerfile: ./services/event/Dockerfile
+    env_file:
+      - ./services/event/.env
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8006:8000"
+    volumes:
+      - ./services/event:/app
+    networks:
+      - app-network
+
+  user_statistic-service:
+    build:
+      context: .
+      dockerfile: ./services/userStatistic/Dockerfile
+    env_file:
+      - ./services/userStatistic/.env
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8007:8000"
+    volumes:
+      - ./services/userStatistic:/app
+    networks:
+      - app-network
+
+  web-service:
+    build:
+      context: .
+      dockerfile: ./services/web/Dockerfile
+    env_file:
+      - ./services/web/.env
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8008:8000"
+    volumes:
+      - ./services/web:/app
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
