@@ -17,7 +17,6 @@ def get_current_user() -> dict[str, Any] | None:
     """
     Получение информации о текущем пользователе из JWT токена.
     Теперь используется прямая JWT авторизация вместо заголовков от Gateway.
-import logging
     
     Returns:
         Dict с user_id, role, auth_type или None если токен отсутствует
@@ -39,10 +38,8 @@ def user_required(
         Dict с информацией о пользователе
     """
     # Проверим что пользователь существует в базе
-    import logging
     user = user_crud.get_user_by_id(db, current_user_info["user_id"])
     if not user:
-        logging.warning(f"User not found in DB: {current_user_info['user_id']}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Пользователь с ID {current_user_info['user_id']} не найден в системе",
@@ -63,20 +60,39 @@ def optional_user(
     Returns:
         Dict с информацией о пользователе или None если токен отсутствует
     """
-    import logging
     if not current_user_info:
-        logging.warning("No user info from JWT (token missing or invalid)")
         return None
+        
     # Проверим что пользователь существует в базе
     user = user_crud.get_user_by_id(db, current_user_info["user_id"])
     if not user:
-        logging.warning(f"User not found in DB (optional): {current_user_info['user_id']}")
         return None
+    
     current_user_info["user_object"] = user
     return current_user_info
 
+    return resolved_user
 
-def admin_required(
+
+async def optional_user(
+    current_user_info: dict[str, Any] | None = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any] | None:
+    """
+    Зависимость для опциональной авторизации.
+    Возвращает информацию о пользователе если он авторизован, иначе None.
+
+    Returns:
+        Dict с информацией о пользователе или None
+    """
+    if not current_user_info:
+        return None
+
+    # Дополняем информацию если нужно
+    return await resolve_user_from_headers(current_user_info, db)
+
+
+async def admin_required(
     current_user: dict[str, Any] = Depends(user_required),
 ) -> dict[str, Any]:
     """
@@ -98,3 +114,34 @@ def admin_required(
         )
 
     return current_user
+
+
+async def telegram_user_required(
+    current_user_info: dict[str, Any] | None = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """
+    Зависимость специально для Telegram бота.
+    Требует авторизации через X-Telegram-ID.
+
+    Raises:
+        HTTPException 401: Если авторизация не через Telegram
+
+    Returns:
+        Dict с информацией о пользователе
+    """
+    if not current_user_info or current_user_info.get("source") != "telegram":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Требуется авторизация через Telegram (X-Telegram-ID).",
+        )
+
+    # Пытаемся найти пользователя по tg_id
+    resolved_user = await resolve_user_from_headers(current_user_info, db)
+    if not resolved_user or not resolved_user.get("user_id"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Пользователь не найден. Необходима регистрация.",
+        )
+
+    return resolved_user

@@ -3,6 +3,8 @@
 Отвечает за настройки подключения к базе данных, логирование и другие параметры.
 """
 
+
+import os
 from pydantic_settings import BaseSettings
 
 
@@ -27,6 +29,10 @@ class Settings(BaseSettings):  # type: ignore[misc]
     ADMIN_SERVICE_URL: str = "http://admin-service:8000"
     AUTH_SERVICE_URL: str = "http://auth-service:8001"
     GATEWAY_SERVICE_URL: str = "http://gateway-service:8080"
+
+    # JWT настройки (должны совпадать с auth сервисом)
+    JWT_SECRET_KEY: str = "chupapupa-shared-super-secret-key-2025"
+    JWT_ALGORITHM: str = "HS256"
 
     class Config:
         env_file = ".env"

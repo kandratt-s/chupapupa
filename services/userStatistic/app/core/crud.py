@@ -221,6 +221,31 @@ class UserCRUD:
         return user
 
     @staticmethod
+    def add_user_points(db: Session, user_id: int, points_delta: float) -> User | None:
+        """
+        Добавить баллы пользователю (может быть отрицательное значение для вычитания).
+
+        Args:
+            db: Сессия базы данных
+            user_id: ID пользователя
+            points_delta: Изменение баллов (положительное - добавить, отрицательное - отнять)
+
+        Returns:
+            User или None, если пользователь не найден
+        """
+        user = UserCRUD.get_user_by_id(db, user_id)
+        if not user:
+            return None
+
+        # Добавляем к текущим баллам, но не даем стать отрицательными
+        new_points = max(0, user.practice_points + points_delta)
+        user.practice_points = new_points
+        db.commit()
+        db.refresh(user)
+
+        return user
+
+    @staticmethod
     def update_user_points(db: Session, user_id: int, points: float) -> User | None:
         """
         Обновить баллы пользователя.

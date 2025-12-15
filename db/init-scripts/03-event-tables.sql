@@ -18,3 +18,9 @@ CREATE TABLE IF NOT EXISTS events (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Права доступа для event сервиса
+GRANT ALL PRIVILEGES ON SCHEMA event_service TO event_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON event_service.events TO event_user;
+GRANT USAGE, SELECT ON SEQUENCE event_service.events_event_id_seq TO event_user;
+GRANT SELECT ON public.users TO event_user;

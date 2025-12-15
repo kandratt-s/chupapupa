@@ -51,3 +51,10 @@ COMMENT ON COLUMN attendance_records.reviewed_by IS 'ID администрато
 COMMENT ON COLUMN attendance_records.notes IS 'Дополнительные заметки';
 COMMENT ON COLUMN attendance_records.created_at IS 'Дата создания записи';
 COMMENT ON COLUMN attendance_records.checked_at IS 'Дата проверки записи';
+
+-- Права доступа для attendance сервиса
+GRANT ALL PRIVILEGES ON SCHEMA attendance_service TO attendance_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON attendance_service.attendance_records TO attendance_user;
+GRANT USAGE, SELECT ON SEQUENCE attendance_service.attendance_records_attendance_id_seq TO attendance_user;
+GRANT SELECT ON public.users TO attendance_user;
+GRANT SELECT ON event_service.events TO attendance_user;

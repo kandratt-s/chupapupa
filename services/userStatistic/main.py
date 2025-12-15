@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.database import get_db, init_db
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -149,6 +150,14 @@ async def health_check() -> dict[str, Any]:
         "port": settings.PORT,
         "version": "1.0.0",
     }
+
+
+# ===================================================================
+# СТАТИЧЕСКИЕ ФАЙЛЫ (фотографии пользователей)
+# ===================================================================
+
+# Монтируем статические файлы для доступа к фотографиям пользователей
+app.mount("/static/faces", StaticFiles(directory="/shared/photos/faces"), name="faces")
 
 
 # Подключение API роутеров

@@ -44,7 +44,7 @@ class ProxyService:
 
         try:
             response = await self.http_client.get(
-                f"{settings.AUTH_SERVICE_URL}/verify-token",
+                f"{settings.AUTH_SERVICE_URL}/auth/verify-token",
                 headers={"Authorization": auth_header},
                 timeout=settings.AUTH_TIMEOUT,
             )
@@ -56,6 +56,16 @@ class ProxyService:
     def _prepare_service_path(self, path: str) -> str:
         """Подготавливает путь для отправки в микросервис"""
         service_path = path
+        
+        # Специальная обработка для attendance admin endpoints
+        if path.startswith("/attendances/admin"):
+            return path.replace("/attendances", "")
+        
+        # Для остальных attendance endpoints оставляем полный путь
+        if path.startswith("/attendances"):
+            return path
+            
+        # Для остальных сервисов убираем префикс
         for route_prefix in settings.SERVICE_ROUTES.keys():
             if path.startswith(route_prefix):
                 service_path = path[len(route_prefix) :]

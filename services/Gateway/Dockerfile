@@ -15,8 +15,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Копирование исходного кода
-COPY app ./app
-COPY main.py .
+COPY . .
 
 # Создание пользователя для запуска приложения
 RUN adduser --disabled-password --gecos '' appuser
@@ -25,6 +24,9 @@ USER appuser
 # Переменные окружения
 ENV PYTHONPATH=/app
 ENV PORT=8000
+
+# Открываем порт  
+EXPOSE 8000
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

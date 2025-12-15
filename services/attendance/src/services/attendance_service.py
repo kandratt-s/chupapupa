@@ -2,8 +2,10 @@
 Сервис для управления записями посещаемости
 """
 
+import os
 from datetime import datetime
 
+import httpx
 from fastapi import HTTPException, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +20,8 @@ class AttendanceService:
 
     def __init__(self, photo_service: PhotoService):
         self.photo_service = photo_service
+        self.user_statistic_url = os.getenv("USER_STATISTIC_SERVICE_URL", "http://user-statistic-service:8006")
+        self.http_client = httpx.AsyncClient(timeout=30.0)
 
     async def create_attendance(
         self, db: AsyncSession, user_id: int, data: AttendanceCreate, photo: UploadFile
@@ -46,7 +50,7 @@ class AttendanceService:
 
         # Сохраняем файл (фото или PDF)
         file_path = await self.photo_service.save_attendance_photo(photo, attendance.attendance_id)
-        attendance.file_path = file_path
+        attendance.photo_path = file_path
 
         await db.commit()
         return attendance
@@ -147,6 +151,14 @@ class AttendanceService:
         if review_data.approve:
             attendance.status = APPROVED
             attendance.is_aproved = True
+            
+            # Начисляем баллы пользователю если указаны
+            if review_data.points and review_data.points > 0:
+                try:
+                    await self._award_points(attendance.user_id, review_data.points, admin_id)
+                except Exception as e:
+                    # Логируем ошибку, но не прерываем процесс одобрения
+                    print(f"Ошибка начисления баллов пользователю {attendance.user_id}: {e}")
         else:
             attendance.status = REJECTED
 
@@ -156,6 +168,32 @@ class AttendanceService:
         await db.commit()
         await db.refresh(attendance)
         return attendance
+
+    async def _award_points(self, user_id: int, points: float, admin_id: int) -> None:
+        """Начислить баллы пользователю через UserStatistic сервис"""
+        try:
+            response = await self.http_client.patch(
+                f"{self.user_statistic_url}/admin/user/{user_id}/add-points",
+                json={"points": points, "reason": f"За участие в мероприятии (одобрено админом {admin_id})"},
+                headers={
+                    "x-user-id": str(admin_id),
+                    "x-user-role": "admin",
+                    "x-auth-type": "internal"
+                },
+                timeout=10.0
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"UserStatistic service returned {response.status_code}: {response.text}")
+                
+        except httpx.RequestError as e:
+            raise Exception(f"Ошибка соединения с UserStatistic сервисом: {e}")
+        except Exception as e:
+            raise Exception(f"Неожиданная ошибка при начислении баллов: {e}")
+
+    async def close(self) -> None:
+        """Закрыть HTTP клиент"""
+        await self.http_client.aclose()
 
     async def get_pending_count(self, db: AsyncSession) -> int:
         """Получить количество заявок в ожидании"""

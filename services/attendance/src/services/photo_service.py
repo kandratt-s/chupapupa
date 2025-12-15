@@ -14,9 +14,9 @@ from PIL import Image
 class PhotoService:
     """Сервис для управления файлами (фотографии, документы)"""
 
-    def __init__(self, photos_dir: str = "photos"):
+    def __init__(self, photos_dir: str = "/shared/photos"):
         self.photos_dir = Path(photos_dir)
-        self.users_dir = self.photos_dir / "users"
+        self.users_dir = self.photos_dir / "faces"  # Изменено с "users" на "faces" для совместимости  
         self.attendances_dir = self.photos_dir / "attendances"
 
         # Создаем директории если их нет

@@ -12,6 +12,7 @@ from src.models.schemas import (
     AttendanceListResponse,
     AttendanceResponse,
     AttendanceReview,
+    AttendanceDetailResponse,
 )
 from src.services.attendance_service import AttendanceService
 from src.services.auth_service import get_db, require_admin
@@ -22,6 +23,47 @@ router = APIRouter()
 # Инициализируем сервисы
 photo_service = PhotoService()
 attendance_service = AttendanceService(photo_service)
+
+
+@router.get("/detail/{attendance_id}", response_model=AttendanceDetailResponse)
+async def get_attendance_detail(
+    attendance_id: int,
+    current_user: dict[str, Any] = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> AttendanceDetailResponse:
+    """Получить детализированную информацию о заявке с фотографиями пользователя"""
+    
+    try:
+        attendance = await attendance_service.get_attendance_by_id(db, attendance_id)
+        if not attendance:
+            raise HTTPException(status_code=404, detail="Заявка не найдена")
+        
+        # Создаем базовый ответ
+        response_data = AttendanceResponse.model_validate(attendance.to_dict())
+        
+        # Добавляем URLs для фотографий
+        user_photo_url = None
+        attendance_photo_url = None
+        
+        if attendance.photo_path:
+            # Используем правильное расширение из file_path
+            import os
+            filename = os.path.basename(attendance.photo_path)
+            attendance_photo_url = f"/static/attendances/{filename}"
+            
+        # URL для фото пользователя
+        user_photo_url = f"/static/faces/{attendance.user_id}.jpg"
+        
+        return AttendanceDetailResponse(
+            **response_data.model_dump(),
+            user_photo_url=user_photo_url,
+            attendance_photo_url=attendance_photo_url
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при получении заявки: {str(e)}") from e
 
 
 @router.get("/pending", response_model=AttendanceListResponse)

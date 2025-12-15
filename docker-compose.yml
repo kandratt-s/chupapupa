@@ -11,11 +11,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init-scripts:/docker-entrypoint-initdb.d
+    restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   # =====================================================
   # ОБЩЕЕ ХРАНИЛИЩЕ ДЛЯ ФОТОГРАФИЙ
@@ -26,10 +28,15 @@ services:
       - photos_data:/shared/photos
     command: |
       sh -c "
+        echo '🔧 Инициализация структуры папок для фотографий...' &&
         mkdir -p /shared/photos/faces /shared/photos/attendances &&
+        chmod -R 755 /shared/photos &&
+        chown -R 1000:1000 /shared/photos &&
         echo '✅ Структура папок создана:' &&
         echo '  - /shared/photos/faces/ - фотографии пользователей' &&
         echo '  - /shared/photos/attendances/ - файлы посещений' &&
+        echo '🔒 Права доступа: 755, владелец: 1000:1000' &&
+        ls -la /shared/photos/ &&
         tail -f /dev/null
       "
     networks:
@@ -48,6 +55,8 @@ services:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql://auth_user:auth_pass@postgres:5432/chupapupa_pj
       - PHOTOS_PATH=/shared/photos
+    expose:
+      - "8001"  # Внутренний порт, не доступен снаружи
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,7 +66,13 @@ services:
       - photos_data:/shared/photos
     networks:
       - internal-network
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
 
   event-service:
     build:
@@ -66,12 +81,20 @@ services:
     environment:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql://event_user:event_pass@postgres:5432/chupapupa_pj
+    expose:
+      - "8004"  # Внутренний порт, не доступен снаружи
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - internal-network
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
 
   attendance-service:
     build:
@@ -81,16 +104,27 @@ services:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql+asyncpg://chupapupa:chupapupaZXC@postgres:5432/chupapupa_pj
       - PHOTOS_PATH=/shared/photos/attendances
+      - USER_STATISTIC_SERVICE_URL=http://user-statistic-service:8006
+    expose:
+      - "8003"  # Внутренний порт, не доступен снаружи
     depends_on:
       postgres:
         condition: service_healthy
       photos-volume:
         condition: service_started
+      user-statistic-service:
+        condition: service_started
     volumes:
       - photos_data:/shared/photos
     networks:
       - internal-network
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
 
   user-statistic-service:
     build:
@@ -100,6 +134,8 @@ services:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql://user_statistic_user:user_statistic_pass@postgres:5432/chupapupa_pj
       - PHOTOS_PATH=/shared/photos/faces
+    expose:
+      - "8006"  # Внутренний порт, не доступен снаружи
     depends_on:
       postgres:
         condition: service_healthy
@@ -109,7 +145,13 @@ services:
       - photos_data:/shared/photos
     networks:
       - internal-network
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
 
   # =====================================================
   # ПУБЛИЧНЫЙ GATEWAY (единственный внешний API доступ)
@@ -134,23 +176,24 @@ services:
       - CORS_ORIGINS=http://localhost:3000,http://localhost:8000
     depends_on:
       auth-service:
-        condition: service_started
+        condition: service_healthy
       event-service:
-        condition: service_started
+        condition: service_healthy
       attendance-service:
-        condition: service_started
+        condition: service_healthy
       user-statistic-service:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "8000:8000"  # Единственный внешний API порт
     networks:
       - internal-network
-    restart: unless-stopped
+    restart: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 60s
 
 # =====================================================
 # СЕТИ И ТОМА
@@ -159,7 +202,7 @@ services:
 networks:
   internal-network:
     driver: bridge
-    # internal: false позволяет Gateway обращаться наружу
+    # internal: false позволяет Gateway обращаться наружу для healthcheck'ов
     internal: false
 
 volumes:

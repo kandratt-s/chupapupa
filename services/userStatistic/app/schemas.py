@@ -111,6 +111,7 @@ class UserResponse(UserBase):
     user_id: int = Field(..., description="Главный ключ таблицы")
     created_at: datetime = Field(..., description="Дата создания записи")
     updated_at: datetime = Field(..., description="Дата последнего обновления")
+    photo_url: str | None = Field(None, description="URL для доступа к фотографии пользователя")
 
     class Config:
         from_attributes = True  # Позволяет создавать из SQLAlchemy моделей

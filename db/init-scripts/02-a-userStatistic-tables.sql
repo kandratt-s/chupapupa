@@ -20,3 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_users_tg_id ON public.users(tg_id);
 
 -- Комментарии
 COMMENT ON TABLE public.users IS 'Основная таблица пользователей системы';
+
+-- Предварительные права доступа для userStatistic сервиса
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO user_statistic_user;
+GRANT USAGE, SELECT ON SEQUENCE public.users_user_id_seq TO user_statistic_user;

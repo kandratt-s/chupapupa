@@ -217,3 +217,30 @@ async def telegram_admin_update_user(
         return UserResponse.from_orm(user)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+
+@router.get("/user/{tg_id}", summary="Получить пользователя по Telegram ID")
+async def get_user_by_telegram_id(
+    tg_id: str,
+    db: Session = Depends(get_db)
+) -> dict[str, Any]:
+    """
+    Получить информацию о пользователе по Telegram ID.
+    Используется Gateway для валидации Telegram авторизации.
+    """
+    user = user_crud.get_user_by_tg_id(db, tg_id)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Пользователь с таким Telegram ID не найден"
+        )
+    
+    return {
+        "user_id": user.user_id,
+        "role": user.role,
+        "tg_id": user.tg_id,
+        "tg_name": user.tg_name,
+        "first_name": user.first_name,
+        "last_name": user.last_name
+    }

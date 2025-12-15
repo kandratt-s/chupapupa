@@ -22,6 +22,13 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1, description="Пароль")
 
 
+class EmailLoginRequest(BaseModel):
+    """Запрос на авторизацию по email"""
+
+    email: str = Field(..., description="Email пользователя")
+    password: str = Field(..., min_length=1, description="Пароль")
+
+
 class AuthCreate(BaseModel):
     """Создание записи аутентификации"""
 

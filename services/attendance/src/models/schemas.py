@@ -25,6 +25,7 @@ class AttendanceReview(BaseModel):
 
     approve: bool = Field(..., description="Одобрить или отклонить заявку")
     notes: str | None = Field(None, max_length=1000, description="Комментарий администратора")
+    points: float | None = Field(None, ge=0, description="Количество баллов для начисления (при одобрении)")
 
 
 class UserInfo(BaseModel):

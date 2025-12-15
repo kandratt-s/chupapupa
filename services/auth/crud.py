@@ -2,6 +2,7 @@
 CRUD операции для Auth сервиса.
 """
 
+import httpx
 from sqlalchemy.orm import Session
 from models import Auth
 from schemas import AuthCreate, AuthUpdate
@@ -67,3 +68,30 @@ def authenticate_user(db: Session, user_id: int, password: str) -> Optional[Auth
     if not verify_password(password, auth_record.password_hash):
         return None
     return auth_record
+
+
+async def authenticate_user_by_email(db: Session, email: str, password: str) -> Optional[Auth]:
+    """Аутентифицирует пользователя по email и паролю"""
+    # Запрашиваем пользователя по email из userStatistic сервиса
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "http://user-statistic-service:8006/users/by-email",
+                params={"email": email},
+                timeout=5.0
+            )
+            
+            if response.status_code != 200:
+                return None
+                
+            user_data = response.json()
+            user_id = user_data.get("user_id")
+            
+            if not user_id:
+                return None
+                
+            # Проверяем пароль через существующую функцию
+            return authenticate_user(db, user_id, password)
+            
+    except (httpx.RequestError, httpx.TimeoutException):
+        return None

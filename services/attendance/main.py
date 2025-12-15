@@ -30,9 +30,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Статические файлы для фотографий (новая структура)
-app.mount("/static/attendances", StaticFiles(directory="photos/attendances"), name="attendances")
-app.mount("/static/thumbnails", StaticFiles(directory="photos/attendances/thumbnails"), name="thumbnails")
+# Статические файлы для фотографий (общие тома)
+app.mount("/static/attendances", StaticFiles(directory="/shared/photos/attendances"), name="attendances")
+app.mount("/static/faces", StaticFiles(directory="/shared/photos/faces"), name="faces")
 
 # Подключение маршрутов
 app.include_router(users.router, prefix="/attendances", tags=["Users"])
@@ -73,7 +73,7 @@ async def health_check() -> HealthResponse:
     )
 
 
-@app.get("/")
+@app.get("/info")
 async def root() -> dict[str, Any]:
     """Корневой endpoint"""
     return {
@@ -85,12 +85,5 @@ async def root() -> dict[str, Any]:
     }
 
 
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8003,
-        reload=True,
-    )
+# Примечание: uvicorn.run не нужен, так как приложение запускается через Docker
+# с командой: uvicorn main:app --host 0.0.0.0 --port 8003

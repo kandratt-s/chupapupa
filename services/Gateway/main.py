@@ -79,13 +79,5 @@ app.include_router(main_api.router, tags=["Gateway"])
 app.include_router(proxy_api.router, tags=["Proxy"])
 
 
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(
-        "main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG,
-        log_level=settings.LOG_LEVEL.lower(),
-    )
+# Примечание: uvicorn.run не нужен, так как приложение запускается через Docker
+# с командой: uvicorn main:app --host 0.0.0.0 --port 8000

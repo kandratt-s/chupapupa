@@ -13,7 +13,7 @@ from auth import (
     create_refresh_token,
     decode_token,
 )
-from crud import authenticate_user, create_auth, get_auth_by_user_id, update_auth
+from crud import authenticate_user, authenticate_user_by_email, create_auth, get_auth_by_user_id, update_auth
 from database import engine, get_db
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from models import Base
@@ -23,6 +23,7 @@ from schemas import (
     AuthResponse,
     AuthUpdate,
     ChangePasswordRequest,
+    EmailLoginRequest,
     LoginRequest,
     RefreshTokenRequest,
     Token,
@@ -39,47 +40,7 @@ app = FastAPI(
 )
 
 
-# ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-
-
-def get_current_user_from_token(
-    authorization: str | None = Header(None), db: Session = Depends(get_db)
-) -> dict[str, Any]:
-    """Получает информацию о текущем пользователе из JWT токена"""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid authorization header",
-        )
-
-    token = authorization.split(" ")[1]
-
-    try:
-        payload = decode_token(token)
-        if payload.get("type") != "access":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type"
-            )
-
-        user_id = payload.get("user_id")
-        role = payload.get("role")
-
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
-            )
-
-        # Проверяем, что пользователь существует в Auth таблице
-        auth_record = get_auth_by_user_id(db, user_id)
-        if not auth_record:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-
-        return {"user_id": user_id, "role": role, "auth_record": auth_record}
-
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        ) from None
+# ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ========== from None
 
 
 # ========== ПУБЛИЧНЫЕ ЭНДПОИНТЫ ==========
@@ -113,6 +74,37 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)) -> Token:
 
     access_token = create_access_token(data=token_data, expires_delta=access_token_expires)
 
+    refresh_token = create_refresh_token(data=token_data, expires_delta=refresh_token_expires)
+
+    return Token(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
+
+@app.post("/login-email", response_model=Token, tags=["auth"])
+async def login_by_email(login_data: EmailLoginRequest, db: Session = Depends(get_db)) -> Token:
+    """
+    Авторизация пользователя по email.
+    Проверяет email и пароль, возвращает JWT токены.
+    """
+    # Аутентифицируем пользователя по email
+    auth_record = await authenticate_user_by_email(db, login_data.email, login_data.password)
+    if not auth_record:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
+        )
+
+    # Создаем данные для токена
+    token_data = {"user_id": auth_record.user_id, "role": auth_record.role}
+
+    # Создаем токены
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expires = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+
+    access_token = create_access_token(data=token_data, expires_delta=access_token_expires)
     refresh_token = create_refresh_token(data=token_data, expires_delta=refresh_token_expires)
 
     return Token(
@@ -180,7 +172,7 @@ def refresh_token(refresh_data: RefreshTokenRequest, db: Session = Depends(get_d
 @app.put("/change-password", tags=["users"])
 def change_password(
     password_data: ChangePasswordRequest,
-    current_user: dict[str, Any] = Depends(get_current_user_from_token),
+    x_user_id: str = Header(None, alias="X-User-ID"),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     """
@@ -190,11 +182,22 @@ def change_password(
     - Текущий пароль для подтверждения
     - Новый пароль
 
-    Требует валидный JWT токен в заголовке Authorization.
+    API Gateway проверяет JWT и передаёт X-User-ID.
     """
     from auth import get_password_hash, verify_password
+    
+    if not x_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Отсутствует заголовок X-User-ID. Запрос должен пройти через API Gateway."
+        )
 
-    auth_record = current_user["auth_record"]
+    # Получаем auth запись по user_id
+    auth_record = get_auth_by_user_id(db, int(x_user_id))
+    if not auth_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден"
+        )
 
     # Проверяем текущий пароль
     if not verify_password(password_data.current_password, auth_record.password_hash):
@@ -303,28 +306,3 @@ def get_auth_record(user_id: int, db: Session = Depends(get_db)) -> AuthResponse
         created_at=auth_record.created_at.isoformat(),
         updated_at=auth_record.updated_at.isoformat(),
     )
-
-
-@app.get("/health", tags=["health"])
-async def health_check() -> dict[str, Any]:
-    """Health check эндпоинт для мониторинга с проверкой БД"""
-    db_status = "disconnected"
-    
-    try:
-        # Простая проверка подключения к БД через SQLAlchemy
-        db = next(get_db())
-        result = db.execute(text("SELECT 1"))
-        if result:
-            db_status = "connected"
-        db.close()
-    except Exception:
-        db_status = "disconnected"
-    
-    return {
-        "service": "auth-service",
-        "status": "healthy" if db_status == "connected" else "unhealthy",
-        "database": db_status,
-        "port": 8001,
-        "version": "1.0.0",
-        "timestamp": datetime.utcnow().isoformat(),
-    }

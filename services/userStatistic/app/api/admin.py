@@ -21,8 +21,27 @@ from app.schemas import (
     UserResponse,
     UserUpdate,
 )
+from app.services.photo_service import PhotoService
 
 router: APIRouter = APIRouter(prefix="/admin", tags=["admin"])
+
+# Инициализация сервиса для работы с фотографиями
+photo_service = PhotoService()
+
+
+def create_user_response(user) -> UserResponse:
+    """
+    Создать UserResponse с photo_url на основе объекта пользователя.
+    
+    Args:
+        user: Объект пользователя из базы данных
+        
+    Returns:
+        UserResponse: Пользователь с добавленным photo_url
+    """
+    user_data = create_user_response(user)
+    user_data.photo_url = photo_service.get_photo_url(user.user_id)
+    return user_data
 
 
 @router.get(
@@ -124,7 +143,7 @@ async def get_user_by_id(
             detail=f"Пользователь с ID {user_id} не найден",
         )
 
-    return UserResponse.from_orm(user)
+    return create_user_response(user)
 
 
 @router.post(
@@ -167,7 +186,7 @@ async def create_user(
     """
     try:
         user = user_crud.create_user(db, user_data)
-        return UserResponse.from_orm(user)
+        return create_user_response(user)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
@@ -220,7 +239,7 @@ async def update_user_admin(
                 detail=f"Пользователь с ID {user_id} не найден",
             )
 
-        return UserResponse.from_orm(user)
+        return create_user_response(user)
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
@@ -312,7 +331,67 @@ async def update_user_points(
             detail=f"Пользователь с ID {user_id} не найден",
         )
 
-    return UserResponse.from_orm(user)
+    return create_user_response(user)
+
+
+@router.patch(
+    "/user/{user_id}/add-points",
+    response_model=UserResponse,
+    summary="Добавить баллы пользователю",
+    description="""
+    Добавление баллов пользователю. Используется системой для автоматического 
+    начисления баллов (например, при одобрении заявок на посещение мероприятий).
+    
+    Поддерживает как положительные, так и отрицательные значения.
+    Баллы не могут стать отрицательными - минимальное значение 0.
+    """,
+)
+async def add_user_points(
+    user_id: int,
+    points_data: dict = ...,  # {"points": float, "reason": str}
+    current_user: dict[str, Any] = Depends(admin_required),
+    db: Session = Depends(get_db),
+) -> UserResponse:
+    """
+    Добавить баллы пользователю.
+
+    Args:
+        user_id: ID пользователя
+        points_data: {"points": изменение баллов, "reason": причина (опционально)}
+        db: Сессия базы данных
+
+    Returns:
+        UserResponse: Обновленная информация о пользователе
+
+    Raises:
+        HTTPException 404: Если пользователь не найден
+        HTTPException 400: Если некорректные данные
+    """
+    try:
+        points_delta = points_data.get("points", 0)
+        if not isinstance(points_delta, (int, float)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Поле 'points' должно быть числом",
+            )
+        
+        user = user_crud.add_user_points(db, user_id, points_delta)
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Пользователь с ID {user_id} не найден",
+            )
+
+        return create_user_response(user)
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Ошибка обновления баллов: {str(e)}",
+        )
 
 
 @router.get(
@@ -354,4 +433,4 @@ async def get_user_by_telegram(
             detail=f"Пользователь с Telegram username '{telegram_username}' не найден",
         )
 
-    return UserResponse.from_orm(user)
+    return create_user_response(user)
