@@ -20,7 +20,9 @@ class AttendanceService:
 
     def __init__(self, photo_service: PhotoService):
         self.photo_service = photo_service
-        self.user_statistic_url = os.getenv("USER_STATISTIC_SERVICE_URL", "http://user-statistic-service:8006")
+        self.user_statistic_url = os.getenv(
+            "USER_STATISTIC_SERVICE_URL", "http://user-statistic-service:8006"
+        )
         self.http_client = httpx.AsyncClient(timeout=30.0)
 
     async def create_attendance(
@@ -125,7 +127,12 @@ class AttendanceService:
         return attendance
 
     async def submit_review(
-        self, db: AsyncSession, attendance_id: int, admin_id: int, review_data: AttendanceReview
+        self,
+        db: AsyncSession,
+        attendance_id: int,
+        admin_id: int,
+        review_data: AttendanceReview,
+        auth_header: str | None = None,
     ) -> AttendanceRecord:
         """Завершить рассмотрение заявки"""
 
@@ -151,11 +158,13 @@ class AttendanceService:
         if review_data.approve:
             attendance.status = APPROVED
             attendance.is_aproved = True
-            
+
             # Начисляем баллы пользователю если указаны
             if review_data.points and review_data.points > 0:
                 try:
-                    await self._award_points(attendance.user_id, review_data.points, admin_id)
+                    await self._award_points(
+                        attendance.user_id, review_data.points, admin_id, auth_header
+                    )
                 except Exception as e:
                     # Логируем ошибку, но не прерываем процесс одобрения
                     print(f"Ошибка начисления баллов пользователю {attendance.user_id}: {e}")
@@ -169,27 +178,38 @@ class AttendanceService:
         await db.refresh(attendance)
         return attendance
 
-    async def _award_points(self, user_id: int, points: float, admin_id: int) -> None:
+    async def _award_points(
+        self, user_id: int, points: float, admin_id: int, auth_header: str | None
+    ) -> None:
         """Начислить баллы пользователю через UserStatistic сервис"""
         try:
+            headers = {
+                "x-user-id": str(admin_id),
+                "x-user-role": "admin",
+                "x-auth-type": "internal",
+            }
+            if auth_header:
+                headers["Authorization"] = auth_header
+
             response = await self.http_client.patch(
                 f"{self.user_statistic_url}/admin/user/{user_id}/add-points",
-                json={"points": points, "reason": f"За участие в мероприятии (одобрено админом {admin_id})"},
-                headers={
-                    "x-user-id": str(admin_id),
-                    "x-user-role": "admin",
-                    "x-auth-type": "internal"
+                json={
+                    "points": points,
+                    "reason": f"За участие в мероприятии (одобрено админом {admin_id})",
                 },
-                timeout=10.0
+                headers=headers,
+                timeout=10.0,
             )
-            
+
             if response.status_code != 200:
-                raise Exception(f"UserStatistic service returned {response.status_code}: {response.text}")
-                
+                raise Exception(
+                    f"UserStatistic service returned {response.status_code}: {response.text}"
+                )
+
         except httpx.RequestError as e:
-            raise Exception(f"Ошибка соединения с UserStatistic сервисом: {e}")
+            raise Exception(f"Ошибка соединения с UserStatistic сервисом: {e}") from e
         except Exception as e:
-            raise Exception(f"Неожиданная ошибка при начислении баллов: {e}")
+            raise Exception(f"Неожиданная ошибка при начислении баллов: {e}") from e
 
     async def close(self) -> None:
         """Закрыть HTTP клиент"""

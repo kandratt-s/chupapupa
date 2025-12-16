@@ -5,14 +5,14 @@ API эндпоинты для администраторов
 import math
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.schemas import (
+    AttendanceDetailResponse,
     AttendanceListResponse,
     AttendanceResponse,
     AttendanceReview,
-    AttendanceDetailResponse,
 )
 from src.services.attendance_service import AttendanceService
 from src.services.auth_service import get_db, require_admin
@@ -32,34 +32,31 @@ async def get_attendance_detail(
     db: AsyncSession = Depends(get_db),
 ) -> AttendanceDetailResponse:
     """Получить детализированную информацию о заявке с фотографиями пользователя"""
-    
+
     try:
         attendance = await attendance_service.get_attendance_by_id(db, attendance_id)
         if not attendance:
             raise HTTPException(status_code=404, detail="Заявка не найдена")
-        
+
         # Создаем базовый ответ
         response_data = AttendanceResponse.model_validate(attendance.to_dict())
-        
+
         # Добавляем URLs для фотографий
-        user_photo_url = None
+        user_photo_url = photo_service.get_user_photo_url(attendance.user_id)
         attendance_photo_url = None
-        
+
         if attendance.photo_path:
-            # Используем правильное расширение из file_path
             import os
+
             filename = os.path.basename(attendance.photo_path)
             attendance_photo_url = f"/static/attendances/{filename}"
-            
-        # URL для фото пользователя
-        user_photo_url = f"/static/faces/{attendance.user_id}.jpg"
-        
+
         return AttendanceDetailResponse(
             **response_data.model_dump(),
             user_photo_url=user_photo_url,
-            attendance_photo_url=attendance_photo_url
+            attendance_photo_url=attendance_photo_url,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -94,6 +91,7 @@ async def get_pending_attendances(
 async def submit_review(
     attendance_id: int,
     review_data: AttendanceReview,
+    request: Request,
     current_user: dict[str, Any] = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> AttendanceResponse:
@@ -103,7 +101,11 @@ async def submit_review(
 
     try:
         attendance = await attendance_service.submit_review(
-            db, attendance_id, admin_id, review_data
+            db,
+            attendance_id,
+            admin_id,
+            review_data,
+            auth_header=request.headers.get("authorization"),
         )
         return AttendanceResponse.model_validate(attendance.to_dict())
 

@@ -13,44 +13,30 @@ from app.core.jwt_auth import get_current_user_from_jwt, get_optional_user_from_
 from app.database import get_db
 
 
-def get_current_user() -> dict[str, Any] | None:
-    """
-    Получение информации о текущем пользователе из JWT токена.
-    Теперь используется прямая JWT авторизация вместо заголовков от Gateway.
-import logging
-    
-    Returns:
-        Dict с user_id, role, auth_type или None если токен отсутствует
-    """
-    return Depends(get_optional_user_from_jwt)
-
-
-def user_required(
+def get_current_user(
     current_user_info: dict[str, Any] = Depends(get_current_user_from_jwt),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """
-    Зависимость, которая требует авторизованного пользователя с валидным JWT токеном.
-
-    Raises:
-        HTTPException 401: Если JWT токен отсутствует или невалидный
-
-    Returns:
-        Dict с информацией о пользователе
+    Требует валидный JWT и возвращает информацию о пользователе из БД.
     """
-    # Проверим что пользователь существует в базе
-    import logging
     user = user_crud.get_user_by_id(db, current_user_info["user_id"])
     if not user:
-        logging.warning(f"User not found in DB: {current_user_info['user_id']}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Пользователь с ID {current_user_info['user_id']} не найден в системе",
         )
-    
-    # Добавляем объект пользователя для удобства
     current_user_info["user_object"] = user
     return current_user_info
+
+
+def user_required(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Алиас для get_current_user для читаемости в роутерах.
+    """
+    return current_user
 
 
 def optional_user(
@@ -58,38 +44,22 @@ def optional_user(
     db: Session = Depends(get_db),
 ) -> dict[str, Any] | None:
     """
-    Зависимость для получения информации о пользователе (необязательно).
-    
-    Returns:
-        Dict с информацией о пользователе или None если токен отсутствует
+    Получает пользователя из JWT, если токен присутствует и пользователь существует.
     """
-    import logging
     if not current_user_info:
-        logging.warning("No user info from JWT (token missing or invalid)")
         return None
-    # Проверим что пользователь существует в базе
     user = user_crud.get_user_by_id(db, current_user_info["user_id"])
     if not user:
-        logging.warning(f"User not found in DB (optional): {current_user_info['user_id']}")
         return None
     current_user_info["user_object"] = user
     return current_user_info
 
 
 def admin_required(
-    current_user: dict[str, Any] = Depends(user_required),
+    current_user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, Any]:
     """
     Зависимость, которая требует пользователя с правами администратора.
-
-    Args:
-        current_user: Информация о текущем пользователе
-
-    Raises:
-        HTTPException 403: Если у пользователя нет прав администратора
-
-    Returns:
-        Dict с информацией о пользователе
     """
     if current_user.get("role") != "admin":
         raise HTTPException(

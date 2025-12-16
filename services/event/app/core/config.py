@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = "chupapupaZXC"
     DB_NAME: str = "chupapupa_pj"
     DATABASE_URL: str | None = None
+    EVENT_DATABASE_URL: str | None = None  # поддержка переменной из compose
 
     # URL-ы других сервисов
     ADMIN_SERVICE_URL: str = "http://admin-service:8000"
@@ -40,6 +41,8 @@ class Settings(BaseSettings):
         """Получаем DATABASE_URL из переменной или собираем из отдельных параметров."""
         if self.DATABASE_URL:
             return self.DATABASE_URL
+        if self.EVENT_DATABASE_URL:
+            return self.EVENT_DATABASE_URL
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     class Config:

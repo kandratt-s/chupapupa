@@ -3,33 +3,45 @@
 Обработка авторизации через заголовки JWT из Gateway.
 """
 
+import os
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, cast
 
-from fastapi import Depends, HTTPException, status, Request
+# JWT decode logic (эталон userStatistic)
+import jwt
+from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "chupapupa-shared-super-secret-key-2025")
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
-
-# JWT decode logic (эталон userStatistic)
-import jwt
-SECRET_KEY = "chupapupa-shared-super-secret-key-2025"
-ALGORITHM = "HS256"
 
 def decode_jwt_token(token: str) -> dict[str, Any]:
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload: dict[str, Any] = cast(
+            dict[str, Any],
+            jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]),
+        )
         if payload.get("type") != "access":
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Невалидный тип токена")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Невалидный тип токена"
+            )
         return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Истекший токен")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Невалидный токен")
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ошибка разбора токена")
+    except jwt.ExpiredSignatureError as err:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Истекший токен"
+        ) from err
+    except jwt.InvalidTokenError as err:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Невалидный токен"
+        ) from err
+    except Exception as err:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Ошибка разбора токена"
+        ) from err
+
 
 async def get_current_user(request: Request) -> dict[str, Any]:
     auth_header = request.headers.get("Authorization")
@@ -40,7 +52,7 @@ async def get_current_user(request: Request) -> dict[str, Any]:
     user_data = {
         "user_id": payload.get("user_id"),
         "role": payload.get("role", "user"),
-        "auth_type": "jwt"
+        "auth_type": "jwt",
     }
     user_data["is_admin"] = user_data["role"] == "admin"
     return user_data

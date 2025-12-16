@@ -16,7 +16,9 @@ class PhotoService:
 
     def __init__(self, photos_dir: str = "/shared/photos"):
         self.photos_dir = Path(photos_dir)
-        self.users_dir = self.photos_dir / "faces"  # Изменено с "users" на "faces" для совместимости  
+        self.users_dir = (
+            self.photos_dir / "faces"
+        )  # Изменено с "users" на "faces" для совместимости
         self.attendances_dir = self.photos_dir / "attendances"
 
         # Создаем директории если их нет
@@ -82,9 +84,8 @@ class PhotoService:
         # Возвращаем относительный путь
         return f"photos/attendances/{filename}"
 
-    def get_user_photo_path(self, user_id: int) -> str:
-        """Получить путь к файлу пользователя (фото или PDF)"""
-        # Проверяем существующие расширения (приоритет фото)
+    def get_user_photo_path(self, user_id: int) -> str | None:
+        """Получить абсолютный путь к файлу пользователя (фото или PDF)"""
         extensions = [
             ".jpg",
             ".jpeg",
@@ -101,10 +102,17 @@ class PhotoService:
         for ext in extensions:
             file_path = self.users_dir / f"{user_id}{ext}"
             if file_path.exists():
-                return f"photos/users/{user_id}{ext}"
+                return str(file_path)
 
-        # Если не найдено, возвращаем путь с .jpg по умолчанию
-        return f"photos/users/{user_id}.jpg"
+        return None
+
+    def get_user_photo_url(self, user_id: int) -> str | None:
+        """Получить URL фото пользователя для отдачи через /static"""
+        absolute_path = self.get_user_photo_path(user_id)
+        if not absolute_path:
+            return None
+        filename = os.path.basename(absolute_path)
+        return f"/static/faces/{filename}"
 
     def _get_file_extension(
         self, filename: str | None, content_type: str, allowed_types: dict[str, str]

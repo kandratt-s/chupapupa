@@ -7,7 +7,7 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.crud import user_crud
@@ -29,17 +29,17 @@ router: APIRouter = APIRouter(prefix="/admin", tags=["admin"])
 photo_service = PhotoService()
 
 
-def create_user_response(user) -> UserResponse:
+def create_user_response(user: Any) -> UserResponse:
     """
     Создать UserResponse с photo_url на основе объекта пользователя.
-    
+
     Args:
         user: Объект пользователя из базы данных
-        
+
     Returns:
         UserResponse: Пользователь с добавленным photo_url
     """
-    user_data = create_user_response(user)
+    user_data = UserResponse.from_orm(user)
     user_data.photo_url = photo_service.get_photo_url(user.user_id)
     return user_data
 
@@ -339,16 +339,16 @@ async def update_user_points(
     response_model=UserResponse,
     summary="Добавить баллы пользователю",
     description="""
-    Добавление баллов пользователю. Используется системой для автоматического 
+    Добавление баллов пользователю. Используется системой для автоматического
     начисления баллов (например, при одобрении заявок на посещение мероприятий).
-    
+
     Поддерживает как положительные, так и отрицательные значения.
     Баллы не могут стать отрицательными - минимальное значение 0.
     """,
 )
 async def add_user_points(
     user_id: int,
-    points_data: dict = ...,  # {"points": float, "reason": str}
+    points_data: dict[str, Any] = Body(...),  # {"points": float, "reason": str}
     current_user: dict[str, Any] = Depends(admin_required),
     db: Session = Depends(get_db),
 ) -> UserResponse:
@@ -369,12 +369,12 @@ async def add_user_points(
     """
     try:
         points_delta = points_data.get("points", 0)
-        if not isinstance(points_delta, (int, float)):
+        if not isinstance(points_delta, int | float):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Поле 'points' должно быть числом",
             )
-        
+
         user = user_crud.add_user_points(db, user_id, points_delta)
 
         if not user:
@@ -384,14 +384,14 @@ async def add_user_points(
             )
 
         return create_user_response(user)
-    
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Ошибка обновления баллов: {str(e)}",
-        )
+        ) from e
 
 
 @router.get(
