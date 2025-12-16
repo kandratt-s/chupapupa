@@ -42,6 +42,8 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA user_statistic_service TO user_stat
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA user_statistic_service TO user_statistic_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA user_statistic_service GRANT ALL ON TABLES TO user_statistic_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA user_statistic_service GRANT ALL ON SEQUENCES TO user_statistic_user;
+-- Даем базовое право создавать таблицы в public для первичного развертывания users
+GRANT USAGE, CREATE ON SCHEMA public TO user_statistic_user;
 
 CREATE SCHEMA IF NOT EXISTS admin_service;
 CREATE USER admin_user WITH PASSWORD 'admin_pass';

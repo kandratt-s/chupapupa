@@ -8,6 +8,7 @@
 -- Доступ к таблице users в public схеме
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO user_statistic_user;
 GRANT USAGE, SELECT ON SEQUENCE public.users_user_id_seq TO user_statistic_user;
+GRANT USAGE, CREATE ON SCHEMA public TO user_statistic_user;
 
 -- ===========================================
 -- ПРАВА ДЛЯ AUTH SERVICE
