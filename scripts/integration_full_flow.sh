@@ -2,6 +2,37 @@
 set -euo pipefail
 
 BASE="${BASE:-http://localhost:8000}"
+PYTHON_BIN="${PYTHON_BIN:-}"
+
+# Pick a Python interpreter that really works (avoid broken Windows shims).
+pick_python() {
+  local candidates=()
+  if [[ -n "$PYTHON_BIN" ]]; then
+    candidates=("$PYTHON_BIN")
+  else
+    candidates=("python3" "python" "py -3" "py")
+  fi
+  for cand in "${candidates[@]}"; do
+    # Split string into array to allow values like "py -3"
+    # shellcheck disable=SC2206
+    local cmd=($cand)
+    if "${cmd[@]}" - <<'PY' >/dev/null 2>&1
+print("ok")
+PY
+    then
+      PY_CMD=("${cmd[@]}")
+      return 0
+    fi
+  done
+  echo "Python interpreter not found (tried python3/python/py). Install Python or set PYTHON_BIN" >&2
+  exit 1
+}
+
+pick_python
+
+run_python() {
+  "${PY_CMD[@]}" "$@"
+}
 
 # Credentials and files (override via env if нужно)
 ADMIN_PASS="${ADMIN_PASS:-admin-pass-123}"
@@ -55,7 +86,7 @@ wait_for_ready() {
 json_get() {
   local key="$1"
   if [[ -n "${JSON_DATA:-}" ]]; then
-    python - "$key" <<'PY'
+    run_python - "$key" <<'PY'
 import json, sys, os
 key = sys.argv[1]
 raw = os.environ.get("JSON_DATA", "")
@@ -66,7 +97,7 @@ for part in key.split('.'):
 print(val)
 PY
   else
-    python - "$key" <<'PY'
+    run_python - "$key" <<'PY'
 import json, sys
 key = sys.argv[1]
 data = json.load(sys.stdin)
@@ -154,7 +185,7 @@ STATUS="$(JSON_DATA="$review_resp" json_get status)"
 echo "   review status=$STATUS"
 
 echo "8) Проверка заявки и баллов..."
-curl -s -H "Authorization: Bearer $USER_TOKEN" "$BASE/attendances/$ATT_ID" | python -m json.tool
-curl -s -H "Authorization: Bearer $USER_TOKEN" "$BASE/user-statistics/users/me" | python -m json.tool
+curl -s -H "Authorization: Bearer $USER_TOKEN" "$BASE/attendances/$ATT_ID" | run_python -m json.tool
+curl -s -H "Authorization: Bearer $USER_TOKEN" "$BASE/user-statistics/users/me" | run_python -m json.tool
 
 echo "✅ Готово"
