@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     WEB_SERVICE_URL: str = "http://web-service:8000"
 
     # === БЕЗОПАСНОСТЬ ===
-    JWT_SECRET_KEY: str = "your-super-secret-jwt-key-here-change-in-production"
+    JWT_SECRET_KEY: str = "chupapupa-shared-super-secret-key-2025"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 30
 

@@ -40,7 +40,7 @@ app = FastAPI(
 )
 
 
-# ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ========== from None
+# ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 
 
 # ========== ПУБЛИЧНЫЕ ЭНДПОИНТЫ ==========
@@ -241,8 +241,7 @@ def create_auth_record(auth_data: AuthCreate, db: Session = Depends(get_db)) -> 
 
 @app.put("/{user_id}", response_model=AuthResponse, tags=["admin"])
 def update_auth_record(
-    user_id: int, auth_data: AuthUpdate, db: Session = Depends(get_db)
-) -> AuthResponse:
+    user_id: int, auth_data: AuthUpdate, db: Session = Depends(get_db)) -> AuthResponse:
     """
     Обновление записи аутентификации.
     Используется Admin сервисом для управления пользователями.
