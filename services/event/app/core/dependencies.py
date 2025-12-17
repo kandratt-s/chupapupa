@@ -7,7 +7,6 @@ import os
 from collections.abc import AsyncGenerator
 from typing import Any, cast
 
-# JWT decode logic (эталон userStatistic)
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession

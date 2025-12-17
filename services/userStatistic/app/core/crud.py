@@ -167,7 +167,7 @@ class UserCRUD:
         )
 
         db.add(db_user)
-        db.commit()
+        db.commit()  # INSERT
         db.refresh(db_user)
 
         return db_user

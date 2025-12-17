@@ -93,6 +93,9 @@ class Settings(BaseSettings):
     def SERVICE_ROUTES(self) -> dict[str, str]:
         """Маппинг маршрутов на микросервисы"""
         return {
+            # Static files
+            "/static/faces": self.USER_STATISTIC_SERVICE_URL,
+            "/static/attendances": self.ATTENDANCE_SERVICE_URL,
             "/auth": self.AUTH_SERVICE_URL,
             "/api/auth": self.AUTH_SERVICE_URL,
             "/events": self.EVENT_SERVICE_URL,

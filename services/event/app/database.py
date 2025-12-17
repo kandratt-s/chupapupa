@@ -47,8 +47,6 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """Инициализация базы данных."""
-    # Создаем таблицы (только для разработки)
-    # В продакшене используйте миграции
     if settings.DEBUG:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)

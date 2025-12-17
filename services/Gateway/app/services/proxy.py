@@ -61,6 +61,10 @@ class ProxyService:
         if path.startswith("/attendances/admin"):
             return path.replace("/attendances", "")
         
+        # Специальная обработка для static файлов - оставляем полный путь
+        if path.startswith("/static/"):
+            return path
+            
         # Для остальных attendance endpoints оставляем полный путь
         if path.startswith("/attendances"):
             return path
@@ -109,9 +113,17 @@ class ProxyService:
             service_path = self._prepare_service_path(path)
             target_url = f"{service_url}{service_path}"
 
-            # Подготовка заголовков и тела запроса
+            # Подготовка заголовков
             headers = self._prepare_headers(request)
-            body = await request.body() if request.method in ["POST", "PUT", "PATCH"] else None
+
+            # Подготовка тела запроса - используем stream для multipart/form-data
+            body = None
+            if request.method in ["POST", "PUT", "PATCH"]:
+                # Читаем тело как поток байтов для корректной обработки multipart
+                body_bytes = b""
+                async for chunk in request.stream():
+                    body_bytes += chunk
+                body = body_bytes if body_bytes else None
 
             logger.debug(f"📤 Forwarding {request.method} {path} -> {target_url}")
 

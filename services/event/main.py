@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # Создаем FastAPI приложение
 app = FastAPI(
     title="Event Microservice",
-    description="Микросервис управления событиями для системы ВШЭ",
+    description="Микросервис управления событиями ",
     version=settings.VERSION,
     lifespan=lifespan,
     docs_url="/docs",

@@ -9,7 +9,7 @@ from sqlalchemy.sql import func
 
 
 class Base(DeclarativeBase):
-    """Базовый класс для декларативных моделей (SQLAlchemy 2.0)."""
+    """Базовый класс для декларативных моделей (SQLAlchemy 2.0). рот ебал mypy"""
 
     pass
 
