@@ -188,4 +188,29 @@ echo "8) Проверка заявки и баллов..."
 curl -s -H "Authorization: Bearer $USER_TOKEN" "$BASE/attendances/$ATT_ID" | run_python -m json.tool
 curl -s -H "Authorization: Bearer $USER_TOKEN" "$BASE/user-statistics/users/me" | run_python -m json.tool
 
+echo "9) Скачивание фото..."
+echo "   Скачиваем фото админа..."
+curl -s "$BASE/static/faces/$ADMIN_ID.jpg" -o "downloaded_admin_face.jpg"
+echo "   Скачиваем фото пользователя..."
+curl -s "$BASE/static/faces/$USER_ID.jpg" -o "downloaded_user_face.jpg"
+echo "   Скачиваем фото attendance..."
+curl -s "$BASE/static/attendances/$ATT_ID.jpg" -o "downloaded_attendance.jpg"
+
+echo "   Проверяем скачанные файлы:"
+if ls -la downloaded_*.jpg 2>/dev/null; then
+    echo "   ✅ Все файлы скачаны успешно"
+    # Проверяем, что файлы являются изображениями
+    for file in downloaded_*.jpg; do
+        if file "$file" | grep -q "JPEG image"; then
+            echo "   ✅ $file - корректное JPEG изображение"
+        else
+            echo "   ❌ $file - не является JPEG изображением"
+            cat "$file"
+        fi
+    done
+else
+    echo "   ❌ Ошибка: файлы не найдены"
+    exit 1
+fi
+
 echo "✅ Готово"
