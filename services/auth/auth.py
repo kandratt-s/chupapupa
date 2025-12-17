@@ -11,7 +11,7 @@ import os
 import secrets
 
 # Конфигурация с безопасными значениями по умолчанию
-SECRET_KEY = os.getenv("SECRET_KEY", "development-secret-key-change-in-production-12345")
+SECRET_KEY = "chupapupa-shared-super-secret-key-2025"
 
 if SECRET_KEY == "development-secret-key-change-in-production-12345":
     print("⚠️  Warning: Using development SECRET_KEY. Change it in production!")

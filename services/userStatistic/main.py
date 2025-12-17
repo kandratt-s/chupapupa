@@ -10,18 +10,18 @@
 """
 
 import logging
-from typing import Dict, Any, AsyncGenerator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
+from app.api.main import api_router
+from app.core.config import settings
+from app.database import get_db, init_db
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
-from app.core.config import settings
-from app.database import init_db, get_db
-from app.api.main import api_router
-
 
 # Настройка логирования
 logging.basicConfig(
@@ -60,9 +60,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error(f"Ошибка инициализации базы данных: {e}")
         raise
 
-    logger.info(
-        f"Сервис {settings.SERVICE_NAME} успешно запущен на порту {settings.PORT}"
-    )
+    logger.info(f"Сервис {settings.SERVICE_NAME} успешно запущен на порту {settings.PORT}")
 
     yield
 
@@ -108,8 +106,8 @@ app.add_middleware(
 )
 
 
-@app.get("/", tags=["health"], response_model=Dict[str, str])  # type: ignore[misc]
-async def root() -> Dict[str, str]:
+@app.get("/", tags=["health"], response_model=dict[str, str])  # type: ignore[misc]
+async def root() -> dict[str, str]:
     """
     Проверка состояния сервиса.
 
@@ -122,8 +120,8 @@ async def root() -> Dict[str, str]:
     return {"service": settings.SERVICE_NAME, "status": "running", "version": "1.0.0"}
 
 
-@app.get("/health", tags=["health"], response_model=Dict[str, Any])  # type: ignore[misc]
-async def health_check() -> Dict[str, Any]:
+@app.get("/health", tags=["health"], response_model=dict[str, Any])  # type: ignore[misc]
+async def health_check() -> dict[str, Any]:
     """
     Расширенная проверка здоровья сервиса.
 
@@ -152,6 +150,14 @@ async def health_check() -> Dict[str, Any]:
         "port": settings.PORT,
         "version": "1.0.0",
     }
+
+
+# ===================================================================
+# СТАТИЧЕСКИЕ ФАЙЛЫ (фотографии пользователей)
+# ===================================================================
+
+# Монтируем статические файлы для доступа к фотографиям пользователей
+app.mount("/static/faces", StaticFiles(directory="/shared/photos/faces"), name="faces")
 
 
 # Подключение API роутеров

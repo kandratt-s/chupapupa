@@ -82,7 +82,7 @@ chmod +x test_auth.sh
 ## Переменные окружения
 
 ### Обязательные
-- `SECRET_KEY` - **КРИТИЧЕСКИ ВАЖНО!** Секретный ключ для JWT (сгенерируйте безопасный)
+- `SECRET_KEY` - **ВАЖНО!** Секретный ключ для JWT (юзать только безопасный)
 
 ### Необязательные
 - `ACCESS_TOKEN_EXPIRE_MINUTES` - Время жизни access токенов (по умолчанию: 15 мин)
@@ -93,7 +93,7 @@ chmod +x test_auth.sh
 
 ### Генерация SECRET_KEY
 ```bash
-# Сгенерируйте безопасный ключ:
+# Генерация безопасного ключа:
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 # Пример результата:
@@ -102,7 +102,7 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 ### Настройка для продакшена
 ```bash
-# Обязательно установите в production:
+# Обязательно установить в production:
 export SECRET_KEY="your-generated-key-here"
 export ACCESS_TOKEN_EXPIRE_MINUTES=15
 export REFRESH_TOKEN_EXPIRE_DAYS=7

@@ -1,26 +1,28 @@
 """
 Специальные эндпоинты для работы с Telegram ботом.
-Поддерживает авторизацию по telegram_user_id и все операции как для обычных пользователей, так и для админов.
+Поддерживает авторизацию по telegram_user_id и все операции
+как для обычных пользователей, так и для админов.
 """
 
-from typing import Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.database import get_db
 from app.core.crud import user_crud
+from app.core.dependencies import admin_required, user_required
+from app.database import get_db
 from app.schemas import (
-    UserResponse,
-    UserUpdate,
     TelegramAuthRequest,
     TelegramAuthResponse,
+    UserResponse,
+    UserUpdate,
 )
-from app.core.dependencies import admin_required, user_required
 
 router: APIRouter = APIRouter(prefix="/telegram", tags=["telegram"])
 
 
-@router.post("/auth", summary="Авторизация через Telegram")  # type: ignore[misc]
+@router.post("/auth", summary="Авторизация через Telegram")
 async def telegram_auth(
     auth_data: TelegramAuthRequest, db: Session = Depends(get_db)
 ) -> TelegramAuthResponse:
@@ -45,7 +47,7 @@ async def telegram_auth(
             user = user_crud.get_user_by_tg_name(db, auth_data.tg_name)
             if user:
                 # Обновляем tg_id если нашли по tg_name
-                user.tg_id = str(auth_data.tg_id)  # type: ignore[assignment]
+                user.tg_id = str(auth_data.tg_id)
                 db.commit()
                 db.refresh(user)
 
@@ -61,14 +63,14 @@ async def telegram_auth(
 
     return TelegramAuthResponse(
         user=UserResponse.from_orm(user),
-        role="student",  # TODO: Получать из Auth Service
+        role="user",  # TODO: Получать из Auth Service
         authenticated=True,
     )
 
 
-@router.get("/profile", summary="Получить профиль авторизованного пользователя")  # type: ignore[misc]
+@router.get("/profile", summary="Получить профиль авторизованного пользователя")
 async def get_telegram_profile(
-    current_user: Dict[str, Any] = Depends(user_required), db: Session = Depends(get_db)
+    current_user: dict[str, Any] = Depends(user_required), db: Session = Depends(get_db)
 ) -> UserResponse:
     """
     Получить информацию о своем профиле для Telegram бота.
@@ -87,23 +89,21 @@ async def get_telegram_profile(
         user = user_crud.get_user_by_id(db, current_user["user_id"])
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
 
     return UserResponse.from_orm(user)
 
 
-@router.get("/users", summary="[ADMIN] Список пользователей для Telegram админа")  # type: ignore[misc]
+@router.get("/users", summary="[ADMIN] Список пользователей для Telegram админа")
 async def telegram_admin_list_users(
     page: int = Query(1, ge=1, description="Номер страницы"),
     per_page: int = Query(
         10, ge=1, le=50, description="Количество на странице (макс. 50 для Telegram)"
     ),
-    search: Optional[str] = Query(None, description="Поиск по ФИО или Telegram"),
-    current_user: Dict[str, Any] = Depends(admin_required),
+    search: str | None = Query(None, description="Поиск по ФИО или Telegram"),
+    current_user: dict[str, Any] = Depends(admin_required),
     db: Session = Depends(get_db),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Получить список пользователей для Telegram админа.
 
@@ -116,9 +116,7 @@ async def telegram_admin_list_users(
         )
 
     skip = (page - 1) * per_page
-    users, total = user_crud.get_users_list(
-        db=db, skip=skip, limit=per_page, search=search
-    )
+    users, total = user_crud.get_users_list(db=db, skip=skip, limit=per_page, search=search)
 
     # Форматируем для удобного отображения в Telegram
     formatted_users = []
@@ -146,12 +144,10 @@ async def telegram_admin_list_users(
     }
 
 
-@router.get(
-    "/users/{user_id}", summary="[ADMIN] Информация о пользователе для Telegram"
-)  # type: ignore[misc]
+@router.get("/users/{user_id}", summary="[ADMIN] Информация о пользователе для Telegram")
 async def telegram_admin_get_user(
     user_id: int,
-    current_user: Dict[str, Any] = Depends(admin_required),
+    current_user: dict[str, Any] = Depends(admin_required),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """
@@ -165,9 +161,7 @@ async def telegram_admin_get_user(
 
     user = user_crud.get_user_by_id(db, user_id)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
 
     return UserResponse.from_orm(user)
 
@@ -175,11 +169,11 @@ async def telegram_admin_get_user(
 @router.patch(
     "/users/{user_id}/points",
     summary="[ADMIN] Изменить баллы пользователя через Telegram",
-)  # type: ignore[misc]
+)
 async def telegram_admin_update_points(
     user_id: int,
     points_delta: float = Query(..., description="Изменение баллов"),
-    current_user: Dict[str, Any] = Depends(admin_required),
+    current_user: dict[str, Any] = Depends(admin_required),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """
@@ -193,18 +187,16 @@ async def telegram_admin_update_points(
 
     user = user_crud.update_user_points(db, user_id, points_delta)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
 
     return UserResponse.from_orm(user)
 
 
-@router.put("/users/{user_id}", summary="[ADMIN] Обновить пользователя через Telegram")  # type: ignore[misc]
+@router.put("/users/{user_id}", summary="[ADMIN] Обновить пользователя через Telegram")
 async def telegram_admin_update_user(
     user_id: int,
     user_update: UserUpdate,
-    current_user: Dict[str, Any] = Depends(admin_required),
+    current_user: dict[str, Any] = Depends(admin_required),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """
@@ -224,4 +216,31 @@ async def telegram_admin_update_user(
             )
         return UserResponse.from_orm(user)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+
+@router.get("/user/{tg_id}", summary="Получить пользователя по Telegram ID")
+async def get_user_by_telegram_id(
+    tg_id: str,
+    db: Session = Depends(get_db)
+) -> dict[str, Any]:
+    """
+    Получить информацию о пользователе по Telegram ID.
+    Используется Gateway для валидации Telegram авторизации.
+    """
+    user = user_crud.get_user_by_tg_id(db, tg_id)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Пользователь с таким Telegram ID не найден"
+        )
+    
+    return {
+        "user_id": user.user_id,
+        "role": user.role,
+        "tg_id": user.tg_id,
+        "tg_name": user.tg_name,
+        "first_name": user.first_name,
+        "last_name": user.last_name
+    }

@@ -10,3 +10,8 @@ pydantic
 pydantic-settings
 SQLAlchemy
 alembic
+
+asyncpg
+uvicorn
+
+psycopg2-binary

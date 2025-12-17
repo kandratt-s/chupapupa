@@ -3,8 +3,9 @@
 Отвечает за настройки подключения к базе данных, логирование и другие параметры.
 """
 
+
+import os
 from pydantic_settings import BaseSettings
-from pydantic import computed_field
 
 
 class Settings(BaseSettings):  # type: ignore[misc]
@@ -19,17 +20,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     PORT: int = 8006
 
     # Настройки базы данных
-    DB_HOST: str = "postgres"
-    DB_PORT: int = 5432
-    DB_NAME: str = "chupapupa_db"
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "password"
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def DATABASE_URL(self) -> str:
-        """Собираем DATABASE_URL из отдельных параметров."""
-        return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+    DATABASE_URL: str = "postgresql://user_statistic_user:user_statistic_pass@postgres:5432/chupapupa_pj"
 
     # Настройки логирования
     LOG_LEVEL: str = "INFO"
@@ -38,6 +29,10 @@ class Settings(BaseSettings):  # type: ignore[misc]
     ADMIN_SERVICE_URL: str = "http://admin-service:8000"
     AUTH_SERVICE_URL: str = "http://auth-service:8001"
     GATEWAY_SERVICE_URL: str = "http://gateway-service:8080"
+
+    # JWT настройки (должны совпадать с auth сервисом)
+    JWT_SECRET_KEY: str = "chupapupa-shared-super-secret-key-2025"
+    JWT_ALGORITHM: str = "HS256"
 
     class Config:
         env_file = ".env"
