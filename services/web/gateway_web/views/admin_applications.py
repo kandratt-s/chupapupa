@@ -2,12 +2,13 @@ import streamlit as st
 from datetime import datetime
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import (
+from api.gateway_client import (
     api_get_all_applications,
     api_get_user_admin,
     api_get_event,
     api_approve_application,
     api_reject_application,
+    GATEWAY_URL,
 )
 
 
@@ -126,7 +127,9 @@ def render():
                     photo_path = user.get("photo_path")
                     if photo_path:
                         try:
-                            st.image(photo_path, width=200, caption="Фото профиля")
+                            relative_path = photo_path.replace('/shared/photos/', '')
+                            full_url = f"{GATEWAY_URL}/photos/{relative_path}"
+                            st.image(full_url, width=200, caption="Фото профиля")
                         except:
                             st.caption("📷 Фото недоступно")
                     else:
@@ -155,10 +158,12 @@ def render():
             st.markdown("---")
 
             st.markdown("#### 📸 Фото с мероприятия")
-            event_photo = app.get("photo_path")
+            event_photo = app.get("file_path") or app.get("photo_path")
             if event_photo:
                 try:
-                    st.image(event_photo, width=400, caption="Фото-подтверждение")
+                    relative_path = event_photo.replace('/shared/photos/', '')
+                    full_url = f"{GATEWAY_URL}/photos/{relative_path}"
+                    st.image(full_url, width=400, caption="Фото-подтверждение")
                 except:
                     st.warning("📷 Фото недоступно")
             else:

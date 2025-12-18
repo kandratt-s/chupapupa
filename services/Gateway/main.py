@@ -19,6 +19,7 @@ from app.core.middleware import logging_middleware
 from app.services.proxy import proxy_service
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 # Настройка логирования
 logging.basicConfig(
@@ -71,6 +72,9 @@ app.add_middleware(
 
 # Логирование middleware
 app.middleware("http")(logging_middleware)
+
+# Статические файлы для фотографий
+app.mount("/photos", StaticFiles(directory="/shared/photos", check_dir=False), name="photos")
 
 # Подключение роутеров
 app.include_router(main_api.router, tags=["Gateway"])

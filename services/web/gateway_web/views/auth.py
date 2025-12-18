@@ -1,8 +1,8 @@
 import streamlit as st
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import api_login
-from services.web.gateway_web.utils.validators import is_valid_email
+from api.gateway_client import api_login
+from utils.validators import is_valid_email
 
 
 def render():

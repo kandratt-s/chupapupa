@@ -42,7 +42,7 @@ def _normalize_user(data: dict[str, Any]) -> dict[str, Any]:
         "surname": data.get("last_name") or data.get("surname"),
         "email": data.get("hse_email") or data.get("email"),
         "points": data.get("practice_points") or data.get("points", 0),
-        "photo_path": data.get("photo_url") or data.get("photo_path"),
+        "photo_path": data.get("photo_path"),
         "role": role,
     }
 

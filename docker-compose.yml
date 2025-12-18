@@ -153,6 +153,21 @@ services:
       retries: 3
       start_period: 45s
 
+  frontend:
+    build:
+      context: ./services/web/gateway_web
+      dockerfile: Dockerfile
+      network: host
+    environment:
+      - GATEWAY_URL=http://localhost:8000
+    network_mode: host
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    volumes:
+      - photos_data:/shared/photos
+    restart: always
+
   # =====================================================
   # ПУБЛИЧНЫЙ GATEWAY (единственный внешний API доступ)
   # =====================================================
@@ -173,7 +188,7 @@ services:
       - USER_STATISTIC_SERVICE_URL=http://user-statistic-service:8006
       # Безопасность
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-this-in-production}
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8000,http://localhost:8501
     depends_on:
       auth-service:
         condition: service_healthy
@@ -183,6 +198,10 @@ services:
         condition: service_healthy
       user-statistic-service:
         condition: service_healthy
+      photos-volume:
+        condition: service_started
+    volumes:
+      - photos_data:/shared/photos
     ports:
       - "8000:8000"  # Единственный внешний API порт
     networks:

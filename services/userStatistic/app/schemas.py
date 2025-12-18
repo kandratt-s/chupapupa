@@ -130,6 +130,7 @@ class UserListResponse(BaseModel):
     group_name: str
     tg_name: str | None
     practice_points: float
+    photo_path: str | None = Field(None, description="Путь к фотографии пользователя")
 
     class Config:
         from_attributes = True

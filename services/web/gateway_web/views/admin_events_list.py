@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import datetime
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import (
+from api.gateway_client import (
     api_get_all_events,
     api_deactivate_event,
     api_delete_event,

@@ -1,319 +1,241 @@
-# CHUPAPUPA
-## Микросервисная архитектура для управления событиями
-
-CHUPAPUPA - это современная микросервисная система для управления событиями, учета посещаемости и администрирования, построенная на основе FastAPI и PostgreSQL.
-
-## Архитектура проекта
-
-### Сервисы
-
-1. **Auth Service** (Port 8001) - Аутентификация и управление пользователями
-   - Управление пользователями
-   - Управление ролями
-   - Аутентификация и авторизация
-
-2. **Event Service** (Port 8006) - Управление событиями
-   - Создание и управление событиями
-   - Управление участниками события
-   - Регистрация на события
-
-3. **Attendance Service** (Port 8003) - Учет посещаемости
-   - Регистрация посещаемости
-   - История посещений
-   - Отчеты по посещаемости
-
-4. **Admin Service** (Port 8002) - Административные функции
-   - Управление администраторами
-   - Логирование аудита
-   - Отслеживание изменений
-
-5. **CV Service** (Port 8005) - Управление резюме
-   - Хранение резюме пользователей
-   - Публичные и приватные резюме
-   - Управление профилями
-
-6. **User Statistic Service** (Port 8007) - Статистика пользователей
-   - Статистика участия
-   - Рейтинги пользователей
-   - Аналитика активности
-
-7. **Bot Service** (Port 8004) - Сервис ботов
-   - Интеграции с ботами
-   - Автоматизация операций
-
-8. **Web Service** (Port 8008) - Веб-сервис
-   - Интеграция фронтенда
-   - Дополнительные веб-функции
-
-### База данных
-
-- **PostgreSQL** - Single instance с отдельными схемами для каждого сервиса
-- **Alembic** - Управление миграциями БД
-- **SQLAlchemy** - ORM для работы с БД
-
-## Требования
-
-- Python 3.11+
-- PostgreSQL 13+
-- Docker & Docker Compose
-- pip
-
-## Установка и запуск
-
-### Используя Docker Compose
-
-```bash
-# Скачайте проект
-git clone <repo-url>
-cd chupapupa
-
-# Создайте файлы .env для каждого сервиса
-# Пример для services/auth/.env:
-APP_SERVICE_NAME=auth
-APP_SERVICE_PORT=8000
-APP_DEBUG=true
-DB_USER=auth_user
-DB_PASSWORD=auth_pass
-
-# Запустите контейнеры
-docker-compose up -d
-
-# Проверьте статус
-docker-compose ps
-```
-
-### Локальная разработка
-
-```bash
-# Установите зависимости для каждого сервиса
-pip install -r requirements-base.txt
-
-# Для каждого сервиса:
-cd services/auth
-pip install -r requirements.txt
-
-# Запустите миграции Alembic
-alembic upgrade head
-
-# Запустите сервис
-uvicorn main:app --reload --host 0.0.0.0 --port 8001
-```
-
-## Структура проекта
-
-```
-chupapupa/
-├── db/                      # База данных
-│   ├── init-scripts/       # SQL скрипты инициализации
-│   └── schemas.py          # Базовые схемы Pydantic
-├── services/               # Микросервисы
-│   ├── auth/              # Сервис аутентификации
-│   ├── event/             # Сервис событий
-│   ├── attendance/        # Сервис посещаемости
-│   ├── admin/             # Административный сервис
-│   ├── CV/                # Сервис резюме
-│   ├── userStatistic/     # Сервис статистики
-│   ├── bot/               # Сервис ботов
-│   ├── web/               # Веб-сервис
-│   └── Gateway/           # API Gateway
-├── db/                     # Скрипты БД
-│   └── init-scripts/       # SQL-скрипты инициализации
-└── docker-compose.yml      # Docker Compose конфиг
-```
-
-## API Endpoints
-
-### Auth Service (http://localhost:8001)
-
-```
-POST   /users                      - Создать пользователя
-GET    /users                      - Получить всех пользователей
-GET    /users/{user_id}            - Получить пользователя
-PUT    /users/{user_id}            - Обновить пользователя
-DELETE /users/{user_id}            - Удалить пользователя
-GET    /users/search/by-username/{username} - Найти по имени
-GET    /health                     - Проверка здоровья сервиса
-
-POST   /roles                      - Создать роль
-GET    /roles                      - Получить все роли
-GET    /roles/{role_id}            - Получить роль
-PUT    /roles/{role_id}            - Обновить роль
-DELETE /roles/{role_id}            - Удалить роль
-```
-
-### Event Service (http://localhost:8006)
-
-```
-POST   /events                     - Создать событие
-GET    /events                     - Получить все события
-GET    /events/{event_id}          - Получить событие
-PUT    /events/{event_id}          - Обновить событие
-DELETE /events/{event_id}          - Удалить событие
-GET    /events/organizer/{organizer_id} - События организатора
-
-POST   /attendees                  - Зарегистрировать участника
-GET    /events/{event_id}/attendees - Получить участников события
-GET    /users/{user_id}/events     - События пользователя
-DELETE /attendees/{attendee_id}    - Отменить регистрацию
-```
-
-### Attendance Service (http://localhost:8003)
-
-```
-POST   /attendance                 - Создать запись посещаемости
-GET    /attendance                 - Получить все записи
-GET    /attendance/{attendance_id} - Получить запись
-PUT    /attendance/{attendance_id} - Обновить запись
-DELETE /attendance/{attendance_id} - Удалить запись
-GET    /users/{user_id}/attendance - Посещаемость пользователя
-GET    /events/{event_id}/attendance - Посещаемость события
-```
-
-### Admin Service (http://localhost:8002)
-
-```
-POST   /admin-users                - Создать администратора
-GET    /admin-users                - Получить администраторов
-GET    /admin-users/{admin_id}     - Получить администратора
-PUT    /admin-users/{admin_id}     - Обновить администратора
-DELETE /admin-users/{admin_id}     - Удалить администратора
-
-POST   /audit-logs                 - Создать запись аудита
-GET    /audit-logs                 - Получить логи аудита
-GET    /audit-logs/admin/{admin_id} - Логи администратора
-GET    /audit-logs/resource/{type}/{id} - Логи ресурса
-```
-
-### CV Service (http://localhost:8005)
-
-```
-POST   /cvs                        - Создать резюме
-GET    /cvs                        - Получить все резюме
-GET    /cvs/{cv_id}                - Получить резюме
-PUT    /cvs/{cv_id}                - Обновить резюме
-DELETE /cvs/{cv_id}                - Удалить резюме
-GET    /cvs/public                 - Получить публичные резюме
-GET    /cvs/user/{user_id}         - Резюме пользователя
-```
-
-### User Statistic Service (http://localhost:8007)
-
-```
-POST   /statistics                 - Создать статистику
-GET    /statistics                 - Получить статистику
-GET    /statistics/{stat_id}       - Получить статистику
-PUT    /statistics/{stat_id}       - Обновить статистику
-DELETE /statistics/{stat_id}       - Удалить статистику
-GET    /statistics/user/{user_id}  - Статистика пользователя
-GET    /statistics/top-users       - Топ пользователей
-```
-
-## Работа с миграциями
-
-```bash
-# Создать новую миграцию
-cd services/auth
-alembic revision --autogenerate -m "Описание изменения"
-
-# Применить миграции
-alembic upgrade head
-
-# Откатить последнюю миграцию
-alembic downgrade -1
-
-# Просмотреть историю миграций
-alembic history
-```
-
-## Переменные окружения
-
-Каждый сервис требует файла `.env` со следующими переменными:
-
-```env
-# Application
-APP_SERVICE_NAME=auth
-APP_SERVICE_PORT=8000
-APP_DEBUG=false
-APP_LOG_LEVEL=INFO
-
-# Database
-DB_HOST=postgres
-DB_PORT=5432
-DB_USER=auth_user
-DB_PASSWORD=auth_pass
-DB_DATABASE=chupapupa
-DB_SCHEMA=auth_service
-DB_POOL_SIZE=10
-DB_MAX_OVERFLOW=20
-DB_ECHO=false
-```
-
-## Разработка
-
-### Создание нового сервиса
-
-1. Создайте директорию в `services/`
-2. Создайте структуру:
-   - `main.py` - FastAPI приложение
-   - `models.py` - SQLAlchemy модели
-   - `schemas.py` - Pydantic схемы
-   - `repositories.py` - CRUD операции
-   - `db.py` - Конфигурация БД
-   - `requirements.txt` - Зависимости
-   - `Dockerfile` - Образ контейнера
-   - `alembic/` - Миграции
-
-3. Скопируйте `alembic/` из существующего сервиса
-4. Создайте `.env` файл
-
-### Тестирование
-
-```bash
-# Запустить тесты (если есть)
-pytest
-
-# Проверить стиль кода
-ruff check .
-
-# Проверить типы
-mypy .
-```
-
-## API документация
-
-После запуска сервиса, документация доступна по адресам:
-
-- Swagger UI: `http://localhost:8001/docs`
-- ReDoc: `http://localhost:8001/redoc`
-
-## Проблемы и решения
-
-### Проблема с подключением к БД
-
-Убедитесь, что PostgreSQL запущен и доступен:
-
-```bash
-# Проверьте статус контейнера
-docker-compose ps postgres
-
-# Посмотрите логи
-docker-compose logs postgres
-```
-
-### Проблема с миграциями
-
-```bash
-# Убедитесь, что правильно установлена схема в env.py
-# Проверьте alembic.ini
-
-# Попробуйте запустить в offline режиме
-alembic upgrade head --sql
-```
-
-## Лицензия
-
-Укажите лицензию вашего проекта здесь.
-
-## Контакты
-
-Для вопросов и поддержки обратитесь к команде разработки.
+# Chupapupa — Practice Service
+
+Проект — набор микросервисов, веб-интерфейсов и бота для управления мероприятиями, приёма заявок и системы начисления баллов студентам.
+
+# Содержание
+- Краткое описание
+- Архитектура и сервисы
+- Возможности пользователя
+- Возможности администратора
+- Какие функции/эндпоинты используются (список по файлам)
+- Статистика админа
+  
+---
+
+## Краткое описание
+
+Chupapupa реализует:
+- управление мероприятиями (events);
+- приём заявок на участие (applications / attendance);
+- управление пользователями и систему баллов (userStatistic);
+- веб-интерфейс на Streamlit;
+- Telegram-бот;
+- Gateway — центральный HTTP-прокси для маршрутизации запросов между сервисами.
+
+---
+
+## Архитектура и сервисы — детально
+
+Gateway (services/Gateway/gateway.py)
+- Назначение: центральная точка маршрутизации запросов от UI и ботов к внутренним сервисам.
+- Как работает: принимает запросы вида /{service}/{path:path} и пересылает их на соответствующий адрес из конфигурации ROUTES, сохраняя заголовки и тело запроса.
+- Важно: Gateway не выполняет сам авторизацию — за проверку прав отвечают реальные сервисы (например, userStatistic через dependency `admin_required`).
+
+Сервисы, к которым проксирует Gateway:
+
+1) Auth Service
+- Назначение: аутентификация пользователей (веб/бот).
+- Основные эндпоинты (используются клиентами):
+  - POST /login — вход (возвращает токен/сессию).
+- Роль: выдаёт токен/сессии, по ним фронт/боты идентифицируют пользователя и передают заголовки в Gateway.
+
+2) API / Users Service (userStatistic / API)
+- Назначение: пользовательские операции (CRUD пользователей) и логика по работе с профилями и баллами.
+- Основные эндпоинты:
+  - POST /users/create — регистрация пользователя
+  - GET /users — список пользователей (админ)
+  - GET /users/{id} — получить профиль пользователя
+  - DELETE /users/{id} — удалить пользователя
+  - PATCH /users/{id}/points — изменить баллы пользователя
+- Роль: хранит/возвращает профильную информацию, фото (пути/URL), роль и баллы (points).
+
+3) Events Service
+- Назначение: управление мероприятиями.
+- Типичные эндпоинты:
+  - POST /create — создать мероприятие (name, description, is_profile, date)
+  - GET /all — получить все мероприятия
+  - GET /active — получить активные мероприятия
+  - GET /{event_id} — получить мероприятие по ID
+  - POST /{event_id}/deactivate — завершить/деактивировать мероприятие
+  - DELETE /{event_id} — удалить мероприятие
+- Модель мероприятия (поля, используемые в UI):
+  - id, name, description, date, is_active (bool), is_profile (bool)
+
+4) Attendance / Applications Service
+- Назначение: приём заявок на мероприятия, их хранение и статусы.
+- Основные эндпоинты:
+  - POST /create — создать заявку (user_id, event_id, photo_path)
+  - GET /user/{user_id} — получить заявки пользователя
+  - GET /all — получить все заявки (для админов)
+  - POST /{app_id}/approve — одобрить заявку
+  - POST /{app_id}/reject — отклонить заявку
+- Модель заявки:
+  - id, user_id, event_id, status (pending/approved/rejected), created_at, photo_path, event_name, комментарии
+
+5) Statistics Service
+- Назначение: агрегированные данные/метрики системы; может предоставлять endpoint `GET /statistics/full` для отдачи заранее посчитанных агрегатов.
+- Примеры эндпоинтов:
+  - GET /full — вернуть готовые агрегаты (totals, top_events, daily_dynamics и т.д.)
+  - POST /add-points (или другой контракт) — начисление баллов в систему
+- Роль: централизовать сложные агрегации, чтобы UI не загружал все «сырые» данные.
+
+6) Storage Service
+- Назначение: хранение файлов (фото заявок, аватары пользователей), предоставление URL/путей.
+- Типичные операции:
+  - POST /upload — загрузка файлов
+  - GET /files/{id} — получение файла или публичного URL
+- UI/боты отправляют фото в Storage, получают ссылку, которую передают в Attendance/create.
+
+
+
+7) UserStatistic Service (детальнее, если выделен отдельно)
+- Назначение: управление статистикой пользователей (баллы, группы, агрегаты).
+- Ключевые CRUD/агрегатные функции (см. services/userStatistic/app/core/crud.py):
+  - update_user_points — обновление practice_points
+  - get_group_statistics — SQL-агрегации по группам (count, avg, max, min)
+  - get_users_list — пагинация, фильтры, поиск
+- Admin-эндпоинты защищены dependency `admin_required`.
+
+Интеракция — схема
+- Streamlit фронтенд (gateway_web) и Telegram-бот (gateway_bot) отправляют HTTP-запросы в путь вида /{service}/{path} на Gateway.
+- Gateway пересылает запрос в соответствующий внутренний сервис.
+- Сервис выполняет логику и возвращает JSON; Gateway возвращает результат клиенту.
+- Авторизация: токены/сессии передаются в заголовках запросов — внутренние сервисы обязаны проверять авторизацию и роль (admin_required).
+
+---
+
+## Возможности пользователя
+
+Все операции пользователя реализованы через HTTP API и доступны из UI/бота:
+
+- Регистрация / Создание профиля: POST /users/create
+- Вход (login): POST /login — возвращает токен/сессию
+- Просмотр списка мероприятий: GET /events/active или GET /events/all
+- Подача заявки: POST /attendance/create { user_id, event_id, photo_path }
+- Просмотр своих заявок: GET /attendance/user/{user_id}
+- Просмотр профиля: GET /users/{id}
+
+UI и бот используют клиентские функции из `services/web/gateway_web/api/gateway_client.py` и аналогичные клиенты в боте.
+
+---
+
+## Возможности администратора
+
+Админ-интерфейс реализован в Streamlit и через бот; админские операции включают:
+
+1. Управление пользователями (Users API)
+- Получить список всех пользователей (пагинация, поиск, фильтр по активности)
+  - Серверная логика: get_users_list (skip/limit/search/is_active_only)
+- Создать пользователя (проверка уникальности email/tg_id)
+- Обновить профиль пользователя (включая изменение роли и активности)
+- Удалить пользователя
+- Изменить баллы пользователя (update_user_points)
+
+2. Управление мероприятиями (Events Service)
+- Создать мероприятие (name, description, is_profile, date)
+- Просматривать список мероприятий, фильтровать по статусу
+- Деактивировать (завершить) мероприятие
+- Удалить мероприятие
+
+3. Рассмотрение заявок (Attendance Service)
+- Просматривать заявки с фильтрами по статусу
+- Одобрять и отклонять заявки
+- При одобрении инициировать начисление баллов в UserStatistic/Statistics Service
+
+4. Статистика
+- Общая статистика: число пользователей, число студентов, число мероприятий, число заявок
+- Распределение заявок по статусам (pie chart)
+- Популярность мероприятий (топ по числу заявок, bar chart)
+- Динамика подачи заявок по датам (line chart)
+- Рейтинг студентов по баллам (таблица)
+- Метрики эффективности: количество рассмотренных заявок, процент одобрения, средний балл студента и прогресс-бар
+
+5. Права доступа
+- UI: перед показом админских view проверяется session["role"] == "admin" (Streamlit session, get_session)
+- API: админ-эндпоинты защищены зависимостью admin_required (FastAPI dependency)
+- Боты: локальные токены/сессии содержат роль; серверные сервисы дополнительно проверяют права
+
+---
+
+## Какие функции/эндпоинты используются
+
+Ниже — реальные вызовы, которые фронты/боты делают (файлы, использующие эти вызовы указаны рядом):
+
+Gateway client (services/web/gateway_web/api/gateway_client.py)
+- Пользователи:
+  - POST /api/users/create — api_register_user(name, surname, email, password, role, photo_path)
+  - POST /auth/login — api_login(email, password)
+  - GET /api/users/{id} — api_get_user(user_id)
+  - GET /api/users — api_get_all_users()
+  - DELETE /api/users/{id} — api_delete_user(user_id)
+
+- Мероприятия:
+  - POST /events/create — api_create_event(name, description, is_profile, date)
+  - GET /events/{id} — api_get_event(event_id)
+  - GET /events/all — api_get_all_events()
+  - POST /events/{id}/deactivate — api_deactivate_event(event_id)
+  - DELETE /events/{id} — api_delete_event(event_id)
+  - GET /events/active — api_get_active_events()
+
+
+
+- Заявки (Attendance):
+  - POST /attendance/create — api_create_application(user_id, event_id, photo_path)
+  - GET /attendance/user/{user_id} — api_get_my_applications(user_id)
+  - GET /attendance/all — api_get_all_applications()
+  - POST /attendance/{id}/approve — api_approve_application(app_id)
+  - POST /attendance/{id}/reject — api_reject_application(app_id)
+
+- Статистика:
+  - GET /statistics/full — api_get_full_statistics()
+
+Боты (services/bot/gateway_bot/handlers/admin_apps.py)
+- api_get_pending_applications(token)
+- api_get_application(token, id)
+- api_approve_application(token, id)
+- api_reject_application(token, id)
+- api_add_points(token, ...)
+- api_get_user(token, user_id)
+- api_get_event(token, event_id)
+
+Backend (userStatistic service — services/userStatistic/app/api/admin.py)
+- GET /admin/users — получает пользователей с пагинацией/search/active_only
+- POST /admin/users — создание пользователя
+- PUT /admin/users/{id} — обновление пользователя
+- PATCH /admin/users/{id}/points — изменение баллов
+- Dependency: admin_required
+
+Backend CRUD (services/userStatistic/app/core/crud.py)
+- update_user_points — обновление practice_points
+- get_group_statistics — SQL-агрегации по группам (count, avg, max, min)
+- get_users_list — поддержка skip/limit/search/is_active_only
+
+Gateway implementation note
+- Файл `services/Gateway/gateway.py` содержит простую логику проксирования: запросы вида `/{service}/{path}` перенаправляются на адреса из словаря ROUTES, с сохранением заголовков и тела запроса.
+
+---
+
+## Статистика админа
+
+Админская панель (gateway_web) запрашивает данные у отдельных сервисов и затем формирует метрики:
+
+1. Источники данных (запросы к сервисам)
+- GET /attendance/all — все заявки (Attendance Service)
+- GET /api/users — все пользователи (Users API / userStatistic)
+- GET /events/all — все мероприятия (Events Service)
+- GET /events/{id} — детали мероприятия (для получения name/is_profile)
+
+2. Основные показатели
+- Число пользователей
+- Число студентов
+- Число мероприятий
+- Число заявок
+- pending/approved/rejected
+- Активные мероприятия
+
+3. Графики и таблицы
+- Pie chart: распределение заявок по статусам
+- Bar chart: популярность мероприятий
+- Line chart: динамика подачи заявок по датам
+- Таблица: рейтинг студентов
+- Эффективность рассмотрения

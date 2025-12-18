@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import datetime
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import api_get_my_applications, GATEWAY_URL
+from api.gateway_client import api_get_my_applications, GATEWAY_URL
 
 
 def parse_datetime(dt_str: str):
@@ -100,10 +100,12 @@ def render():
                 st.caption(f"🕐 {created_human}")
                 st.caption(f"ID заявки: {app.get('id', '—')}")
 
-                photo_path = app.get("photo_path")
+                photo_path = app.get("file_path") or app.get("photo_path")
                 if photo_path:
                     try:
-                        st.image(photo_path, width=220)
+                        relative_path = photo_path.replace('/shared/photos/', '')
+                        full_url = f"{GATEWAY_URL}/photos/{relative_path}"
+                        st.image(full_url, width=220)
                     except Exception:
                         st.caption("📷 Фото недоступно")
                 notes = app.get("notes")

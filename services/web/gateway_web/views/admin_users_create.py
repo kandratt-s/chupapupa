@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import api_register_user
+from api.gateway_client import api_register_user
 
 
 def render():

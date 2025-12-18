@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import date
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import api_create_event
+from api.gateway_client import api_create_event
 
 
 def render():

@@ -3,7 +3,7 @@ import os
 import time
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import (
+from api.gateway_client import (
     api_get_active_events,
     api_create_application,
 )

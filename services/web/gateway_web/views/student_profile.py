@@ -1,10 +1,11 @@
 import streamlit as st
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import (
+from api.gateway_client import (
     api_get_user,
     api_get_my_applications,
     api_get_active_events,
+    GATEWAY_URL,
 )
 
 
@@ -34,7 +35,9 @@ def render():
         photo_path = user.get("photo_path")
         if photo_path:
             try:
-                st.image(photo_path, width=200)
+                relative_path = photo_path.replace('/shared/photos/', '')
+                url = f"{GATEWAY_URL}/photos/{relative_path}"
+                st.image(url, width=200)
             except:
                 st.markdown("### 🎓")
         else:

@@ -5,7 +5,7 @@ from datetime import datetime
 from collections import Counter
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import (
+from api.gateway_client import (
     api_get_all_applications,
     api_get_all_users,
     api_get_all_events,
