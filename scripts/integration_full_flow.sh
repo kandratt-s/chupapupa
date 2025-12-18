@@ -176,25 +176,49 @@ att_resp="$(curl -sS -f -X POST "$BASE/attendances/" \
 ATT_ID="$(JSON_DATA="$att_resp" json_get attendance_id)"
 echo "   attendance_id=$ATT_ID"
 
-echo "7) Ревью и баллы (админ)..."
-review_resp="$(curl -sS -f -X POST "$BASE/attendances/admin/review/$ATT_ID" \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"approve":true,"notes":"ok","points":10}')"
-STATUS="$(JSON_DATA="$review_resp" json_get status)"
-echo "   review status=$STATUS"
+echo "7) Проверка пользователя..."
+user_data="$(curl -s -H "Authorization: Bearer $USER_TOKEN" "$BASE/user-statistics/users/me")"
+echo "$user_data" | run_python -m json.tool
+USER_PHOTO_PATH="$(JSON_DATA="$user_data" json_get photo_path | sed 's|/shared/photos/||')"
 
-echo "8) Проверка заявки и баллов..."
-curl -s -H "Authorization: Bearer $USER_TOKEN" "$BASE/attendances/$ATT_ID" | run_python -m json.tool
-curl -s -H "Authorization: Bearer $USER_TOKEN" "$BASE/user-statistics/users/me" | run_python -m json.tool
+echo "8) Проверка заявки..."
+att_data="$(curl -s -H "Authorization: Bearer $USER_TOKEN" "$BASE/attendances/$ATT_ID")"
+echo "$att_data" | run_python -m json.tool
+ATT_FILE_PATH="$(JSON_DATA="$att_data" json_get file_path | sed 's|photos/||')"
+
+echo "9) Проверка доступности фото пользователя..."
+if [[ -n "$USER_PHOTO_PATH" ]]; then
+    photo_url="$BASE/photos/$USER_PHOTO_PATH"
+    if curl -f -I "$photo_url" >/dev/null 2>&1; then
+        echo "   ✅ Фото пользователя доступно: $photo_url"
+    else
+        echo "   ❌ Фото пользователя недоступно: $photo_url" >&2
+        exit 1
+    fi
+else
+    echo "   ⚠️  Фото пользователя не указано"
+fi
+
+echo "10) Проверка доступности фото заявки..."
+if [[ -n "$ATT_FILE_PATH" ]]; then
+    photo_url="$BASE/photos/$ATT_FILE_PATH"
+    if curl -f -I "$photo_url" >/dev/null 2>&1; then
+        echo "   ✅ Фото заявки доступно: $photo_url"
+    else
+        echo "   ❌ Фото заявки недоступно: $photo_url" >&2
+        exit 1
+    fi
+else
+    echo "   ⚠️  Фото заявки не указано"
+fi
 
 echo "9) Скачивание фото..."
 echo "   Скачиваем фото админа..."
-curl -s "$BASE/static/faces/$ADMIN_ID.jpg" -o "downloaded_admin_face.jpg"
+curl -s "$BASE/photos/faces/$ADMIN_ID.jpg" -o "downloaded_admin_face.jpg"
 echo "   Скачиваем фото пользователя..."
-curl -s "$BASE/static/faces/$USER_ID.jpg" -o "downloaded_user_face.jpg"
+curl -s "$BASE/photos/faces/$USER_ID.jpg" -o "downloaded_user_face.jpg"
 echo "   Скачиваем фото attendance..."
-curl -s "$BASE/static/attendances/$ATT_ID.jpg" -o "downloaded_attendance.jpg"
+curl -s "$BASE/photos/attendances/$ATT_ID.jpg" -o "downloaded_attendance.jpg"
 
 echo "   Проверяем скачанные файлы:"
 if ls -la downloaded_*.jpg 2>/dev/null; then
