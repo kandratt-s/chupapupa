@@ -4,7 +4,7 @@ import asyncio
 from state import get_session
 from services.web.gateway_web.api.gateway_client import (
     api_get_all_applications,
-    api_get_user,
+    api_get_user_admin,
     api_get_event,
     api_approve_application,
     api_reject_application,
@@ -38,7 +38,7 @@ def render():
     )
 
     try:
-        apps = asyncio.run(api_get_all_applications())
+        apps = asyncio.run(api_get_all_applications(session.get("token")))
     except Exception as e:
         st.error(f"Ошибка загрузки заявок: {e}")
         return
@@ -85,11 +85,11 @@ def render():
 
     for idx, app in enumerate(page_apps):
         try:
-            user = asyncio.run(api_get_user(app["user_id"]))
+            user = asyncio.run(api_get_user_admin(session.get("token"), app["user_id"]))
         except Exception:
             user = None
         try:
-            event = asyncio.run(api_get_event(app["event_id"]))
+            event = asyncio.run(api_get_event(session.get("token"), app["event_id"]))
         except Exception:
             event = None
 
@@ -180,7 +180,7 @@ def render():
                         use_container_width=True,
                     ):
                         try:
-                            asyncio.run(api_approve_application(app["id"]))
+                            asyncio.run(api_approve_application(session.get("token"), app["id"]))
                         except Exception as e:
                             st.error(f"Ошибка одобрения: {e}")
                             return
@@ -193,7 +193,7 @@ def render():
                         use_container_width=True,
                     ):
                         try:
-                            asyncio.run(api_reject_application(app["id"]))
+                            asyncio.run(api_reject_application(session.get("token"), app["id"]))
                         except Exception as e:
                             st.error(f"Ошибка отклонения: {e}")
                             return

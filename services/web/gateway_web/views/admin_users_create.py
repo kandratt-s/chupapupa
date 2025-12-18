@@ -37,6 +37,9 @@ def render():
             ):
                 st.error("Все поля обязательны")
                 return
+            if len(password) < 6:
+                st.error("Пароль должен быть не менее 6 символов")
+                return
 
             photo_path = None
             if photo:
@@ -50,6 +53,7 @@ def render():
             try:
                 user = asyncio.run(
                     api_register_user(
+                        token=session.get("token"),
                         name=name,
                         surname=surname,
                         email=email,
@@ -60,6 +64,10 @@ def render():
                 )
             except Exception as e:
                 st.error(f"Ошибка создания пользователя: {e}")
+                return
+
+            if not user:
+                st.error("Не удалось создать пользователя (проверьте права и корректность данных).")
                 return
 
             st.success(f"✅ Пользователь создан: {user['name']} {user['surname']}")

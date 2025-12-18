@@ -23,6 +23,8 @@ def go(route: str):
 def logout():
     session["user_id"] = None
     session["role"] = None
+    session["token"] = None
+    session["refresh_token"] = None
     session["route"] = "auth"
 
 

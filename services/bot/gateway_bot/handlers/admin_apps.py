@@ -83,8 +83,11 @@ async def show_application(message: types.Message, uid: str, index: int):
     user = await api_get_user(token, app["user_id"])
     full_name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
 
+    event = await api_get_event(token, app["event_id"])
+    event_name = app.get("event_name") or (event.get("name") if event else "Мероприятие")
+
     text = (
-        f"🎯 Мероприятие: {app['event_name']}\n"
+        f"🎯 Мероприятие: {event_name}\n"
         f"👤 Участник: {full_name}\n"
         f"📧 Email: {user.get('email')}\n\n"
         f"Заявка {index + 1} из {len(pending)}"
@@ -99,15 +102,21 @@ async def show_application(message: types.Message, uid: str, index: int):
 
     # Фото студента
     if user.get("photo_url"):
-        await message.bot.send_photo(
-            chat_id, user["photo_url"], caption="📎 Фото студента"
-        )
+        try:
+            await message.bot.send_photo(
+                chat_id, user["photo_url"], caption="📎 Фото студента"
+            )
+        except:
+            pass
 
     # Фото с мероприятия
     if app.get("photo_url"):
-        await message.bot.send_photo(
-            chat_id, app["photo_url"], caption="📸 Фото с мероприятия"
-        )
+        try:
+            await message.bot.send_photo(
+                chat_id, app["photo_url"], caption="📸 Фото с мероприятия"
+            )
+        except:
+            pass
 
     # Меню действий
     kb = types.InlineKeyboardMarkup(
@@ -178,19 +187,10 @@ async def cb_process_application(callback: types.CallbackQuery):
         # Начисляем баллы
         await api_add_points(token, app["user_id"], points)
 
-        # Уведомляем студента
-        try:
-            await callback.bot.send_message(
-                app["telegram_id"],
-                f"✅ Ваша заявка на «{app['event_name']}» одобрена!\n⭐️ +{points} баллов",
-            )
-        except:
-            pass
-
         log_text = (
             f"✅ Заявка одобрена:\n"
-            f"{app['event_name']}\n"
-            f"👤 {app['user_email']}\n"
+            f"{event.get('name')}\n"
+            f"👤 {app['user_id']}\n"
             f"⭐️ +{points} баллов"
         )
 
@@ -200,16 +200,8 @@ async def cb_process_application(callback: types.CallbackQuery):
     else:
         await api_reject_application(token, app_id)
 
-        try:
-            await callback.bot.send_message(
-                app["telegram_id"],
-                f"❌ Ваша заявка на «{app['event_name']}» отклонена.",
-            )
-        except:
-            pass
-
         log_text = (
-            f"❌ Заявка отклонена:\n" f"{app['event_name']}\n" f"👤 {app['user_email']}"
+            f"❌ Заявка отклонена:\n{event.get('name')}\n👤 {app['user_id']}"
         )
 
     # Удаляем меню действий

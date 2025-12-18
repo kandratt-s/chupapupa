@@ -17,7 +17,7 @@ def render():
         return
 
     try:
-        user = asyncio.run(api_get_user(session["user_id"]))
+        user = asyncio.run(api_get_user(session.get("token"), session["user_id"]))
     except Exception as e:
         st.error(f"Ошибка загрузки профиля: {e}")
         return
@@ -67,9 +67,10 @@ def render():
     st.markdown("### 📊 Статистика системы")
 
     try:
-        apps = asyncio.run(api_get_all_applications())
-        users = asyncio.run(api_get_all_users())
-        events = asyncio.run(api_get_all_events())
+        token = session.get("token")
+        apps = asyncio.run(api_get_all_applications(token))
+        users = asyncio.run(api_get_all_users(token))
+        events = asyncio.run(api_get_all_events(token))
     except Exception as e:
         st.error(f"Ошибка загрузки статистики: {e}")
         return

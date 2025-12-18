@@ -38,7 +38,7 @@ async def health_check() -> HealthResponse:
         services_health[route_prefix] = await proxy_service.check_service_health(service_url)
 
     # Основные активные сервисы (исключаем admin, bot, web)
-    active_services = ["/auth", "/events", "/attendance", "/user-statistics"]
+    active_services = ["/auth", "/events", "/attendances", "/user-statistics"]
     active_services_health = [
         services_health.get(service, "unavailable") 
         for service in active_services

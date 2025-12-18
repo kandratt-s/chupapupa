@@ -24,7 +24,7 @@ def render():
     )
 
     try:
-        users = asyncio.run(api_get_all_users())
+        users = asyncio.run(api_get_all_users(session.get("token")))
     except Exception as e:
         st.error(f"Ошибка загрузки пользователей: {e}")
         return
@@ -95,7 +95,7 @@ def render():
                     else:
                         if st.button("🗑", key=f"del_u_{start + idx}"):
                             try:
-                                asyncio.run(api_delete_user(u["id"]))
+                                asyncio.run(api_delete_user(session.get("token"), u["id"]))
                             except Exception as e:
                                 st.error(f"Ошибка удаления пользователя: {e}")
                                 return

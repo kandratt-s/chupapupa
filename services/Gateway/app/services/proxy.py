@@ -56,16 +56,26 @@ class ProxyService:
     def _prepare_service_path(self, path: str) -> str:
         """Подготавливает путь для отправки в микросервис"""
         service_path = path
-        
-        # Специальная обработка для attendance admin endpoints
+
+        # ==== Правила по сервисам ====
+        # Attendance admin: сервис ожидает /admin/* без префикса /attendances
         if path.startswith("/attendances/admin"):
             return path.replace("/attendances", "")
-        
-        # Для остальных attendance endpoints оставляем полный путь
+
+        # Attendance user endpoints: сервис ожидает /attendances/*
         if path.startswith("/attendances"):
+            return path  # оставляем как есть
+
+        # Event admin: сервис ожидает /admin/* без префикса /events
+        if path.startswith("/events/admin"):
+            return path.replace("/events", "", 1)
+
+        # Event основной роутер содержит префикс /events, оставляем его
+        if path.startswith("/events"):
             return path
-            
-        # Для остальных сервисов убираем префикс
+
+        # Остальные сервисы (auth, user-statistics и т.д.) — удаляем префикс,
+        # так как они не включают его в своих ручках
         for route_prefix in settings.SERVICE_ROUTES.keys():
             if path.startswith(route_prefix):
                 service_path = path[len(route_prefix) :]

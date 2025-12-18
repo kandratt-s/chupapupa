@@ -29,6 +29,7 @@ def render():
                 try:
                     ev = asyncio.run(
                         api_create_event(
+                            token=session.get("token"),
                             name=name,
                             description=description,
                             is_profile=is_profile,

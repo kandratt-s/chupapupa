@@ -16,7 +16,7 @@ def render():
         return
 
     try:
-        user = asyncio.run(api_get_user(session["user_id"]))
+        user = asyncio.run(api_get_user(session.get("token"), session["user_id"]))
     except Exception as e:
         st.error(f"Ошибка загрузки профиля: {e}")
         return
@@ -73,8 +73,8 @@ def render():
     st.markdown("### 📊 Ваша активность")
 
     try:
-        my_apps = asyncio.run(api_get_my_applications(session["user_id"]))
-        active_events = asyncio.run(api_get_active_events())
+        my_apps = asyncio.run(api_get_my_applications(session.get("token")))
+        active_events = asyncio.run(api_get_active_events(session.get("token")))
     except Exception as e:
         st.error(f"Ошибка загрузки активности: {e}")
         return
