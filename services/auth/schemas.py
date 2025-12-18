@@ -68,6 +68,13 @@ class Token(BaseModel):
     expires_in: int = Field(..., description="Время жизни access токена в секундах")
 
 
+class TokenWithUser(Token):
+    """JWT токены + информация о пользователе"""
+
+    user_id: int = Field(..., description="ID пользователя")
+    role: str = Field(..., description="Роль пользователя")
+
+
 class TokenPayload(BaseModel):
     """Содержимое JWT токена"""
 

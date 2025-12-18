@@ -63,11 +63,15 @@ class Settings(BaseSettings):
         "/routes",
         "/stats",
         "/auth/login",
+        "/auth/login-email",
         "/auth/register",
         "/auth/refresh",
+        "/auth/verify-token",
         "/api/auth/login",
+        "/api/auth/login-email",
         "/api/auth/register",
         "/api/auth/refresh",
+        "/api/auth/verify-token",
     ]
 
     @computed_field

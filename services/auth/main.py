@@ -27,6 +27,7 @@ from schemas import (
     LoginRequest,
     RefreshTokenRequest,
     Token,
+    TokenWithUser,
 )
 from sqlalchemy.orm import Session
 
@@ -52,8 +53,8 @@ def root() -> dict[str, str]:
     return {"service": "auth-service", "status": "running", "version": "1.0.0"}
 
 
-@app.post("/login", response_model=Token, tags=["auth"])
-def login(login_data: LoginRequest, db: Session = Depends(get_db)) -> Token:
+@app.post("/login", response_model=TokenWithUser, tags=["auth"])
+def login(login_data: LoginRequest, db: Session = Depends(get_db)) -> TokenWithUser:
     """
     Авторизация пользователя.
     Проверяет user_id и пароль, возвращает JWT токены.
@@ -76,16 +77,18 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)) -> Token:
 
     refresh_token = create_refresh_token(data=token_data, expires_delta=refresh_token_expires)
 
-    return Token(
+    return TokenWithUser(
         access_token=access_token,
         refresh_token=refresh_token,
         token_type="bearer",
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        user_id=auth_record.user_id,
+        role=auth_record.role,
     )
 
 
-@app.post("/login-email", response_model=Token, tags=["auth"])
-async def login_by_email(login_data: EmailLoginRequest, db: Session = Depends(get_db)) -> Token:
+@app.post("/login-email", response_model=TokenWithUser, tags=["auth"])
+async def login_by_email(login_data: EmailLoginRequest, db: Session = Depends(get_db)) -> TokenWithUser:
     """
     Авторизация пользователя по email.
     Проверяет email и пароль, возвращает JWT токены.
@@ -107,16 +110,18 @@ async def login_by_email(login_data: EmailLoginRequest, db: Session = Depends(ge
     access_token = create_access_token(data=token_data, expires_delta=access_token_expires)
     refresh_token = create_refresh_token(data=token_data, expires_delta=refresh_token_expires)
 
-    return Token(
+    return TokenWithUser(
         access_token=access_token,
         refresh_token=refresh_token,
         token_type="bearer",
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        user_id=auth_record.user_id,
+        role=auth_record.role,
     )
 
 
-@app.post("/refresh", response_model=Token, tags=["auth"])
-def refresh_token(refresh_data: RefreshTokenRequest, db: Session = Depends(get_db)) -> Token:
+@app.post("/refresh", response_model=TokenWithUser, tags=["auth"])
+def refresh_token(refresh_data: RefreshTokenRequest, db: Session = Depends(get_db)) -> TokenWithUser:
     """
     Обновление access токена по refresh токену.
     """
@@ -153,11 +158,13 @@ def refresh_token(refresh_data: RefreshTokenRequest, db: Session = Depends(get_d
             data=token_data, expires_delta=refresh_token_expires
         )
 
-        return Token(
+        return TokenWithUser(
             access_token=access_token,
             refresh_token=new_refresh_token,
             token_type="bearer",
             expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            user_id=auth_record.user_id,
+            role=auth_record.role,
         )
 
     except Exception:
@@ -213,6 +220,37 @@ def change_password(
     db.commit()
 
     return {"message": "Password changed successfully"}
+
+
+@app.get("/verify-token", tags=["auth"])
+def verify_token(authorization: str = Header(None, alias="Authorization")) -> dict[str, Any]:
+    """
+    Проверка валидности access токена. Возвращает user_id и роль.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header missing",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = authorization.split(" ")[1]
+    payload = decode_token(token)
+
+    token_type = payload.get("type")
+    if token_type != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token type",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return {
+        "user_id": payload.get("user_id"),
+        "role": payload.get("role", "user"),
+        "valid": True,
+        "token_type": token_type,
+    }
 
 
 # ========== АДМИНСКИЕ ЭНДПОИНТЫ ==========

@@ -1,0 +1,34 @@
+[
+   {
+      "id": 2,
+      "name": "А2",
+      "description": "",
+      "date": "2025-12-14",
+      "is_profile": true,
+      "is_active": true
+   },
+   {
+      "id": 4,
+      "name": "А3",
+      "description": "",
+      "date": "2025-12-14",
+      "is_profile": false,
+      "is_active": false
+   },
+   {
+      "id": 5,
+      "name": "А4",
+      "description": "",
+      "date": "2025-12-14",
+      "is_profile": false,
+      "is_active": false
+   },
+   {
+      "id": 4,
+      "name": "rfmwfwefw",
+      "description": ":)",
+      "date": "2026-02-18",
+      "is_profile": true,
+      "is_active": true
+   }
+]

@@ -1,0 +1,31 @@
+[
+   {
+      "id": 1,
+      "name": "Dima",
+      "surname": "None",
+      "email": "dima@mail.ru",
+      "role": "student",
+      "score": 9,
+      "password": "password",
+      "points": 3
+   },
+   {
+      "id": 2,
+      "name": "admin",
+      "surname": "none",
+      "email": "admin@mail.ru",
+      "role": "admin",
+      "score": 0,
+      "password": "password"
+   },
+   {
+      "id": 3,
+      "name": "Диман",
+      "surname": "Новик",
+      "email": "dima@mail.ru",
+      "role": "student",
+      "password": "1234йцукен!",
+      "points": 5,
+      "photo_path": "services/web/data/photos/profiles\\profile_dima_mail.ru_1765699585.jpg"
+   }
+]
