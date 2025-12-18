@@ -62,14 +62,14 @@ elif user.HSEmail and "admin" in user.HSEmail:
 # НЕПРАВИЛЬНО - убрано:
 if user.group_name and ("admin" in user.group_name.lower()):
     is_admin = True
-elif user.hs_email and user.hs_email.endswith("@admin.university.edu"):
+elif user.hse_email and user.hse_email.endswith("@admin.university.edu"):
     is_admin = True
 ```
 
 ### ПРАВИЛЬНО - ТЕПЕРЬ:
 ```python
 # Роль приходит от Auth Service через заголовки
-role = current_user_info.get("role", "student")  # Fallback для разработки
+role = current_user_info.get("role", "user")  # Fallback для разработки
 ```
 
 ## 🚀 TODO для продакшена:

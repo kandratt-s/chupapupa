@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import date
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import api_create_event
+from api.gateway_client import api_create_event
 
 
 def render():
@@ -29,6 +29,7 @@ def render():
                 try:
                     ev = asyncio.run(
                         api_create_event(
+                            token=session.get("token"),
                             name=name,
                             description=description,
                             is_profile=is_profile,

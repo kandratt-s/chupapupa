@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import datetime
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import (
+from api.gateway_client import (
     api_get_all_events,
     api_deactivate_event,
     api_delete_event,
@@ -33,7 +33,7 @@ def render():
     )
 
     try:
-        events = asyncio.run(api_get_all_events())
+        events = asyncio.run(api_get_all_events(session.get("token")))
     except Exception as e:
         st.error(f"Ошибка загрузки мероприятий: {e}")
         return
@@ -91,7 +91,7 @@ def render():
                 if ev.get("is_active", True):
                     if st.button("🏁 Завершить", key=f"deact_{start + idx}"):
                         try:
-                            asyncio.run(api_deactivate_event(ev["id"]))
+                            asyncio.run(api_deactivate_event(session.get("token"), ev["id"]))
                         except Exception as e:
                             st.error(f"Ошибка деактивации: {e}")
                             return
@@ -99,7 +99,7 @@ def render():
 
                 if st.button("🗑 Удалить", key=f"del_{start + idx}"):
                     try:
-                        asyncio.run(api_delete_event(ev["id"]))
+                        asyncio.run(api_delete_event(session.get("token"), ev["id"]))
                     except Exception as e:
                         st.error(f"Ошибка удаления: {e}")
                         return

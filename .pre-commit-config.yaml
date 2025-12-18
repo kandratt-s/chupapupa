@@ -21,6 +21,8 @@ repos:
         args:
           - "--strict"
           - "--ignore-missing-imports"
+          - "--explicit-package-bases"
+          - "--namespace-packages"
 
   # --- Pre-commit default hooks (базовые проверки) ---
   - repo: https://github.com/pre-commit/pre-commit-hooks

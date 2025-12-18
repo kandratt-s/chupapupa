@@ -1,9 +1,3 @@
-import sys
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
-sys.path.append(str(BASE_DIR))
-
 import streamlit as st
 import importlib
 from state import get_session
@@ -23,6 +17,8 @@ def go(route: str):
 def logout():
     session["user_id"] = None
     session["role"] = None
+    session["token"] = None
+    session["refresh_token"] = None
     session["route"] = "auth"
 
 
@@ -91,19 +87,19 @@ else:
 # Маршруты
 # -----------------------------
 ROUTES = {
-    "auth": "services.web.gateway_web.views.auth",
-    "student_events": "services.web.gateway_web.views.student_events",
-    "student_applications": "services.web.gateway_web.views.student_applications",
-    "student_profile": "services.web.gateway_web.views.student_profile",
-    "admin_events_create": "services.web.gateway_web.views.admin_events_create",
-    "admin_events_list": "services.web.gateway_web.views.admin_events_list",
-    "admin_applications": "services.web.gateway_web.views.admin_applications",
-    "admin_users_create": "services.web.gateway_web.views.admin_users_create",
-    "admin_users_list": "services.web.gateway_web.views.admin_users_list",
-    "admin_profile": "services.web.gateway_web.views.admin_profile",
-    "admin_statistics": "services.web.gateway_web.views.admin_statistics",
+    "auth": "views.auth",
+    "student_events": "views.student_events",
+    "student_applications": "views.student_applications",
+    "student_profile": "views.student_profile",
+    "admin_events_create": "views.admin_events_create",
+    "admin_events_list": "views.admin_events_list",
+    "admin_applications": "views.admin_applications",
+    "admin_users_create": "views.admin_users_create",
+    "admin_users_list": "views.admin_users_list",
+    "admin_profile": "views.admin_profile",
+    "admin_statistics": "views.admin_statistics",
 }
 
-module_name = ROUTES.get(session["route"], "services.web.gateway_web.views.auth")
+module_name = ROUTES.get(session["route"], "views.auth")
 module = importlib.import_module(module_name)
 module.render()

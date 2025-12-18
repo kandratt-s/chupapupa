@@ -5,7 +5,7 @@
 
 from fastapi import APIRouter
 
-from app.api import users, admin, telegram
+from app.api import admin, telegram, users
 
 # Создание главного роутера API
 api_router = APIRouter()

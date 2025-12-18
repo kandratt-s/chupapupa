@@ -17,28 +17,24 @@ echo "2. Проверка health endpoint..."
 curl -s "$BASE_URL/health"
 echo -e "\n"
 
-echo "3. Создание записи аутентификации для админа..."
-ADMIN_CREATE_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/create" \
+echo "3. Обновление пароля админа до тестового..."
+ADMIN_UPDATE_RESPONSE=$(curl -s -X PUT "$BASE_URL/auth/$ADMIN_ID" \
   -H "Content-Type: application/json" \
   -d '{
-    "user_id": '$ADMIN_ID',
-    "password": "'"$ADMIN_PASSWORD"'",
-    "role": "admin"
+    "password": "'"$ADMIN_PASSWORD"'"
   }')
 
-echo "$ADMIN_CREATE_RESPONSE"
+echo "$ADMIN_UPDATE_RESPONSE"
 echo -e "\n"
 
-echo "4. Создание записи аутентификации для студента..."
-STUDENT_CREATE_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/create" \
+echo "4. Обновление пароля студента до тестового..."
+STUDENT_UPDATE_RESPONSE=$(curl -s -X PUT "$BASE_URL/auth/$STUDENT_ID" \
   -H "Content-Type: application/json" \
   -d '{
-    "user_id": '$STUDENT_ID',
-    "password": "'"$STUDENT_PASSWORD"'",
-    "role": "user"
+    "password": "'"$STUDENT_PASSWORD"'"
   }')
 
-echo "$STUDENT_CREATE_RESPONSE"
+echo "$STUDENT_UPDATE_RESPONSE"
 echo -e "\n"
 
 echo "5. Логин админа..."

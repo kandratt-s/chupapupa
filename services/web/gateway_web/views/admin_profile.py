@@ -1,11 +1,12 @@
 import streamlit as st
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import (
+from api.gateway_client import (
     api_get_user,
     api_get_all_applications,
     api_get_all_users,
     api_get_all_events,
+    GATEWAY_URL,
 )
 
 
@@ -17,7 +18,7 @@ def render():
         return
 
     try:
-        user = asyncio.run(api_get_user(session["user_id"]))
+        user = asyncio.run(api_get_user(session.get("token"), session["user_id"]))
     except Exception as e:
         st.error(f"Ошибка загрузки профиля: {e}")
         return
@@ -35,7 +36,9 @@ def render():
         photo_path = user.get("photo_path")
         if photo_path:
             try:
-                st.image(photo_path, width=200)
+                relative_path = photo_path.replace('/shared/photos/', '')
+                url = f"{GATEWAY_URL}/photos/{relative_path}"
+                st.image(url, width=200)
             except:
                 st.markdown("### 👑")
         else:
@@ -67,9 +70,10 @@ def render():
     st.markdown("### 📊 Статистика системы")
 
     try:
-        apps = asyncio.run(api_get_all_applications())
-        users = asyncio.run(api_get_all_users())
-        events = asyncio.run(api_get_all_events())
+        token = session.get("token")
+        apps = asyncio.run(api_get_all_applications(token))
+        users = asyncio.run(api_get_all_users(token))
+        events = asyncio.run(api_get_all_events(token))
     except Exception as e:
         st.error(f"Ошибка загрузки статистики: {e}")
         return

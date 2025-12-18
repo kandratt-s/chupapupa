@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import datetime
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import api_get_my_applications
+from api.gateway_client import api_get_my_applications, GATEWAY_URL
 
 
 def parse_datetime(dt_str: str):
@@ -32,7 +32,7 @@ def render():
     )
 
     try:
-        apps = asyncio.run(api_get_my_applications(session["user_id"]))
+        apps = asyncio.run(api_get_my_applications(session.get("token")))
     except Exception as e:
         st.error(f"Ошибка загрузки заявок: {e}")
         return
@@ -70,26 +70,47 @@ def render():
         if status == "approved":
             icon = "✅"
             status_text = "Одобрена"
+            bg = "#e8f8f0"
         elif status == "rejected":
             icon = "❌"
             status_text = "Отклонена"
+            bg = "#fdecea"
         else:
             icon = "⏳"
             status_text = "На рассмотрении"
+            bg = "#fff7e6"
+
+        created_at = parse_datetime(app.get("created_at", ""))
+        created_human = (
+            created_at.strftime("%d.%m.%Y %H:%M")
+            if created_at != datetime.min
+            else app.get("created_at", "Неизвестно")
+        )
+
+        event_id = app.get("event_id")
+        event_name = app.get("event_name") or f"Мероприятие #{event_id}"
+        event_url = f"{GATEWAY_URL}/events/{event_id}" if event_id else None
+        title_md = f"[{event_name}]({event_url})" if event_url else event_name
 
         with st.container(border=True):
             col1c, col2c = st.columns([3, 1])
 
             with col1c:
-                st.markdown(f"### {app.get('event_name', 'Мероприятие')}")
-                st.caption(f"🕐 {app.get('created_at', 'Неизвестно')}")
+                st.markdown(f"### {title_md}")
+                st.caption(f"🕐 {created_human}")
+                st.caption(f"ID заявки: {app.get('id', '—')}")
 
-                photo_path = app.get("photo_path")
+                photo_path = app.get("file_path") or app.get("photo_path")
                 if photo_path:
                     try:
-                        st.image(photo_path, width=200)
-                    except:
+                        relative_path = photo_path.replace('/shared/photos/', '')
+                        full_url = f"{GATEWAY_URL}/photos/{relative_path}"
+                        st.image(full_url, width=220)
+                    except Exception:
                         st.caption("📷 Фото недоступно")
+                notes = app.get("notes")
+                if notes:
+                    st.markdown(f"💬 {notes}")
 
             with col2c:
                 st.markdown(f"## {icon}")

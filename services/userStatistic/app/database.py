@@ -3,12 +3,12 @@
 Создает соединение с PostgreSQL и предоставляет сессии для работы с БД.
 """
 
-from sqlalchemy import create_engine, Engine
-from sqlalchemy.orm import sessionmaker, Session
-from typing import Generator
+from collections.abc import Generator
+
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
-
 
 # Создание движка базы данных
 # echo=True включает логирование SQL запросов в режиме разработки
@@ -20,9 +20,7 @@ engine: Engine = create_engine(
 )
 
 # Фабрика сессий для работы с БД
-SessionLocal: sessionmaker[Session] = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine
-)
+SessionLocal: sessionmaker[Session] = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def get_db() -> Generator[Session, None, None]:

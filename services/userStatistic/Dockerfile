@@ -21,8 +21,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Создание непривилегированного пользователя
-RUN useradd --create-home --shell /bin/bash --user-group app
+# Создание непривилегированного пользователя с фиксированным UID=1000
+# для совместимости с общими томами
+RUN useradd --create-home --shell /bin/bash --user-group --uid 1000 app
 
 # Создание рабочей директории
 WORKDIR /app
@@ -61,5 +62,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 CMD ["uvicorn", "main:app", \
      "--host", "0.0.0.0", \
      "--port", "8006", \
-     "--workers", "4", \
+     "--workers", "1", \
      "--log-level", "info"]

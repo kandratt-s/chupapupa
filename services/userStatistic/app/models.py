@@ -3,13 +3,13 @@
 Определяет структуру таблицы пользователей в БД в соответствии с реальной схемой проекта.
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime
-from sqlalchemy.sql import func
+from sqlalchemy import Column, DateTime, Float, Integer, String
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.sql import func
 
 
 class Base(DeclarativeBase):
-    """Базовый класс для декларативных моделей (SQLAlchemy 2.0)."""
+    """Базовый класс для декларативных моделей (SQLAlchemy 2.0). рот ебал mypy"""
 
     pass
 
@@ -34,9 +34,7 @@ class User(Base):
     # Персональные данные студента
     last_name = Column(String(100), nullable=False, comment="Фамилия студента")
     first_name = Column(String(100), nullable=False, comment="Имя студента")
-    middle_name = Column(
-        String(100), nullable=True, comment="Отчество студента (может быть пусто)"
-    )
+    middle_name = Column(String(100), nullable=True, comment="Отчество студента (может быть пусто)")
 
     # Учебная информация
     group_name = Column(
@@ -44,15 +42,11 @@ class User(Base):
     )
 
     # Контактная информация
-    hs_email = Column(
-        String(100), unique=True, nullable=False, comment="Электронная почта студента"
+    hse_email = Column(
+        String(100), unique=True, nullable=False, comment="Учебная почта HSE студента"
     )
-    tg_id = Column(
-        String(50), unique=True, nullable=True, comment="ID телеграма (не никнейм)"
-    )
-    tg_name = Column(
-        String(100), nullable=True, comment="Ник в телеграме через @, например @Kan"
-    )
+    tg_id = Column(String(50), unique=True, nullable=True, comment="ID телеграма (не никнейм)")
+    tg_name = Column(String(100), nullable=True, comment="Ник в телеграме через @, например @Kan")
 
     # Система баллов
     practice_points = Column(
@@ -78,4 +72,7 @@ class User(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<User(user_id={self.user_id}, name='{self.first_name} {self.last_name}', group='{self.group_name}', tg_name='{self.tg_name}')>"
+        return (
+            f"<User(user_id={self.user_id}, name='{self.first_name} {self.last_name}', "
+            f"group='{self.group_name}', tg_name='{self.tg_name}')>"
+        )

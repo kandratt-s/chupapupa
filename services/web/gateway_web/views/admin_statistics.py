@@ -5,7 +5,7 @@ from datetime import datetime
 from collections import Counter
 import asyncio
 from state import get_session
-from services.web.gateway_web.api.gateway_client import (
+from api.gateway_client import (
     api_get_all_applications,
     api_get_all_users,
     api_get_all_events,
@@ -34,9 +34,10 @@ def render():
     st.markdown("---")
 
     try:
-        apps = asyncio.run(api_get_all_applications())
-        users = asyncio.run(api_get_all_users())
-        events = asyncio.run(api_get_all_events())
+        token = session.get("token")
+        apps = asyncio.run(api_get_all_applications(token))
+        users = asyncio.run(api_get_all_users(token))
+        events = asyncio.run(api_get_all_events(token))
     except Exception as e:
         st.error(f"Ошибка загрузки статистики: {e}")
         return
@@ -119,7 +120,7 @@ def render():
         event_data = []
         for event_id, count in event_apps_count.most_common(10):
             try:
-                event = asyncio.run(api_get_event(event_id))
+                event = asyncio.run(api_get_event(token, event_id))
             except Exception:
                 event = None
             if event:

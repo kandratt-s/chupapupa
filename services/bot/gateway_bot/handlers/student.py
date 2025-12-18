@@ -23,7 +23,6 @@ from services.bot.gateway_bot.api.attendance import (
     api_create_application,
     api_get_my_applications,
 )
-from services.bot.gateway_bot.api.storage import api_upload_photo
 
 
 student_router = Router()
@@ -188,23 +187,11 @@ async def receive_event_photo(message: types.Message):
 
     await f.clear_prompts(message.bot, chat_id)
 
-    # Скачиваем фото
-    local_path = await download_telegram_photo(message, PHOTOS_DIR)
-
-    # Загружаем фото в Object Storage
-    uploaded = await api_upload_photo(token, local_path)
-    if not uploaded:
-        err = await message.answer("❌ Ошибка загрузки фото")
-        await asyncio.sleep(1.2)
-        await delete_message_safe(chat_id, err.message_id)
-        return
-
     # Создаём заявку
     created = await api_create_application(
         token=token,
-        user_id=backend_user_id,
-        event_id=event_id,
-        photo_url=uploaded["url"],
+        event_id=int(event_id),
+        photo_path=await download_telegram_photo(message, PHOTOS_DIR),
     )
 
     f.clear()
@@ -242,9 +229,7 @@ async def cb_my_applications(callback: types.CallbackQuery):
         return
 
     token = session["token"]
-    backend_user_id = session["backend_user_id"]
-
-    apps = await api_get_my_applications(token, backend_user_id)
+    apps = await api_get_my_applications(token)
 
     if not apps:
         await f.show_menu(

@@ -24,3 +24,8 @@ COMMENT ON TABLE auth_service.auth IS 'Таблица для хранения д
 COMMENT ON COLUMN auth_service.auth.user_id IS 'ID пользователя из таблицы userStatistic';
 COMMENT ON COLUMN auth_service.auth.password_hash IS 'Хеш пароля пользователя';
 COMMENT ON COLUMN auth_service.auth.role IS 'Роль пользователя: admin или user';
+
+-- Права доступа для auth сервиса
+GRANT ALL PRIVILEGES ON SCHEMA auth_service TO auth_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON auth_service.auth TO auth_user;
+GRANT SELECT ON public.users TO auth_user;
