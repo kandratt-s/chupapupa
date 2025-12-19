@@ -157,10 +157,11 @@ services:
     build:
       context: ./services/web/gateway_web
       dockerfile: Dockerfile
-    ports:
-      - "8501:8501"
+      network: host
     environment:
       - GATEWAY_URL=http://localhost:8000
+    network_mode: host
+    # command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0 --server.enableCORS=true
     depends_on:
       api-gateway:
         condition: service_healthy

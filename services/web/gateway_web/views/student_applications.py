@@ -103,7 +103,7 @@ def render():
                 photo_path = app.get("file_path") or app.get("photo_path")
                 if photo_path:
                     try:
-                        relative_path = photo_path.replace('/shared/photos/', '')
+                        relative_path = photo_path.replace('photos/', '')
                         full_url = f"{GATEWAY_URL}/photos/{relative_path}"
                         st.image(full_url, width=220)
                     except Exception:
