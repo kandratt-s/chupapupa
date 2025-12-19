@@ -1,6 +1,6 @@
 import os
 
-BOT_TOKEN = "8105586935:AAFOSia4-_neziYsd02pkp8pBPfbvXQ6hfk"
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
