@@ -159,10 +159,12 @@ def render():
 
             st.markdown("#### 📸 Фото с мероприятия")
             event_photo = app.get("file_path") or app.get("photo_path")
+            print(f"DEBUG: event_photo = {event_photo}")
             if event_photo:
                 try:
-                    relative_path = event_photo.replace('/shared/photos/', '')
+                    relative_path = event_photo.replace('photos/', '')
                     full_url = f"{GATEWAY_URL}/photos/{relative_path}"
+                    print(f"DEBUG: full_url = {full_url}")
                     st.image(full_url, width=400, caption="Фото-подтверждение")
                 except:
                     st.warning("📷 Фото недоступно")
