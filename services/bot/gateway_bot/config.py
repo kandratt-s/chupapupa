@@ -7,4 +7,4 @@ PHOTOS_DIR = "services/bot/gateway_bot/photos"
 # Токен бота
 import os
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")

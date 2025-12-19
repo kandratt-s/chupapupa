@@ -222,7 +222,6 @@ services:
 networks:
   internal-network:
     driver: bridge
-    # internal: false позволяет Gateway обращаться наружу для healthcheck'ов
     internal: false
 
 volumes:
